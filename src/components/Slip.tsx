@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { clearSlip, MIN_STAKE, placeBet, removeLeg, setMode, useStore } from "@/lib/store";
-import { fmtCoins } from "@/lib/format";
+import { fmtCoins, fmtOdds } from "@/lib/format";
 
 export function Slip({ onDone }: { onDone?: () => void }) {
   const st = useStore();
@@ -39,7 +39,7 @@ export function Slip({ onDone }: { onDone?: () => void }) {
           <div key={l.eventId + l.marketKey} className="pop rounded-xl border border-line bg-panel2 p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0"><div className="truncate text-[13px] font-bold">{l.title}</div><div className="truncate text-xs text-muted">{l.market}: <span className="text-ink">{l.label}</span></div></div>
-              <div className="flex items-center gap-2"><span className="num font-extrabold text-accent">{l.odds.toFixed(2)}</span><button aria-label="Remove" onClick={() => removeLeg(i)} className="text-muted hover:text-lose">✕</button></div>
+              <div className="flex items-center gap-2"><span className="num font-extrabold text-accent">{fmtOdds(l.odds, st.settings.odds)}</span><button aria-label="Remove" onClick={() => removeLeg(i)} className="text-muted hover:text-lose">✕</button></div>
             </div>
             {singles && <StakeInput v={stake(i)} on={(v) => setStake(i, v)} />}
           </div>
@@ -47,7 +47,7 @@ export function Slip({ onDone }: { onDone?: () => void }) {
         {!singles && legs.length > 1 && <StakeInput v={stake(0)} on={(v) => setStake(0, v)} label="Parlay stake" />}
       </div>
       <div className="space-y-2 border-t border-line p-4">
-        {legs.length > 1 && !singles && <Row k="Total odds" v={exprOdds.toFixed(2)} />}
+        {legs.length > 1 && !singles && <Row k="Total odds" v={fmtOdds(exprOdds, st.settings.odds)} />}
         <Row k="Stake" v={`${fmtCoins(total)} 🪙`} />
         <Row k="Potential win" v={`${fmtCoins(win)} 🪙`} strong />
         {err && <div className="text-sm text-lose">{err}</div>}

@@ -1,9 +1,9 @@
 import { RAW_EVENTS } from "@/data/snapshot";
-import { fitLambdas, invCdf, liveFootball, marketsFor } from "./odds";
+import { fitLambdas, gameProb, invCdf, liveFootball, marketsFor } from "./odds";
 import { hash, mulberry32, poissonSample } from "./rng";
 import type { Ev, Market, RawEvent, Result, Sport } from "./types";
 
-export const MATCH_MS: Record<Sport, number> = { football: 115 * 60e3, hockey: 160 * 60e3, basketball: 150 * 60e3 };
+export const MATCH_MS: Record<Sport, number> = { football: 115 * 60e3, hockey: 160 * 60e3, basketball: 150 * 60e3, americanfootball: 215 * 60e3, tennis: 150 * 60e3, esports: 120 * 60e3, tabletennis: 50 * 60e3, volleyball: 120 * 60e3, mma: 40 * 60e3 };
 const DAY = 86400e3;
 
 function defaultP(r: RawEvent): [number, number, number] {
@@ -13,7 +13,7 @@ function defaultP(r: RawEvent): [number, number, number] {
 }
 function build(r: RawEvent, id: string, virtual = false): Ev {
   const p = defaultP(r);
-  return { id, sport: r.sport, league: r.league, home: r.home, away: r.away, start: Date.parse(r.start), p, markets: marketsFor(r.sport, p), virtual };
+  return { id, sport: r.sport, league: r.league, home: r.home, away: r.away, start: Date.parse(r.start), p, markets: marketsFor(r.sport, p, r.league), virtual };
 }
 const real: Ev[] = RAW_EVENTS.map((r, i) => build(r, `e${i}`));
 
@@ -47,10 +47,39 @@ function virtualEvents(now: number): Ev[] {
   return out;
 }
 
+const FIRST = ["Alex", "Marco", "Ilya", "Jon", "Leo", "Nico", "Pavel", "Sven", "Tomas", "Viktor", "Yuri", "Dario", "Emil", "Felix", "Hugo", "Ivo"];
+const LAST = ["Brandt", "Castell", "Dorn", "Eklund", "Falk", "Garrow", "Holm", "Ibarra", "Jansen", "Kovac", "Lund", "Moreau", "Novak", "Orsini", "Petrov", "Quade", "Roth", "Stenn", "Torres", "Varga"];
+const ADJ = ["Nova", "Iron", "Neon", "Apex", "Lunar", "Rapid", "Silent", "Crimson", "Arctic", "Solar", "Phantom", "Titan"];
+const NOUN = ["Five", "Wolves", "Vipers", "Gaming", "Esports", "Squad", "Legion", "Pulse", "Hawks", "Storm"];
+const VSPORTS: { sport: Sport; league: string; kind: "p" | "t"; n: number; fixed?: number }[] = [
+  { sport: "tennis", league: "Virtual Tennis Open", kind: "p", n: 8 },
+  { sport: "tennis", league: "Virtual Tennis Challenger", kind: "p", n: 6 },
+  { sport: "esports", league: "Virtual CS Major", kind: "t", n: 6 },
+  { sport: "esports", league: "Virtual Dota Series", kind: "t", n: 4 },
+  { sport: "tabletennis", league: "Virtual Table Tennis Cup", kind: "p", n: 10 },
+  { sport: "volleyball", league: "Virtual Volleyball League", kind: "t", n: 5 },
+  { sport: "mma", league: "Virtual Fight Night", kind: "p", n: 6 },
+];
+function virtualSports(now: number): Ev[] {
+  const out: Ev[] = [], day0 = Math.floor(now / DAY);
+  for (let d = 0; d < 3; d++) for (const v of VSPORTS) {
+    const rnd = mulberry32(hash(`${v.league}${day0 + d}`));
+    const name = () => (v.kind === "p" ? `${FIRST[Math.floor(rnd() * FIRST.length)]} ${LAST[Math.floor(rnd() * LAST.length)]}` : `${ADJ[Math.floor(rnd() * ADJ.length)]} ${NOUN[Math.floor(rnd() * NOUN.length)]}`);
+    for (let k = 0; k < v.n; k++) {
+      const home = name(); let away = name(); if (away === home) away += " II";
+      const start = (day0 + d) * DAY + (9 + k * (v.sport === "tabletennis" ? 0.9 : 1.4)) * 3600e3;
+      if (start < now - 5 * 60e3) continue;
+      const ph = 22 + rnd() * 56;
+      out.push(build({ sport: v.sport, league: v.league, home, away, start: new Date(start).toISOString(), p: [ph, 0, 100 - ph] }, `x${day0 + d}-${hash(v.league + k)}`, true));
+    }
+  }
+  return out;
+}
+
 export function upcoming(now: number): Ev[] {
   const list = real.filter((e) => e.start > now - 5 * 60e3);
   const extra = list.length < 40 ? virtualEvents(now) : [];
-  return [...list, ...extra].sort((a, b) => a.start - b.start);
+  return [...list, ...extra, ...virtualSports(now)].sort((a, b) => a.start - b.start);
 }
 export function allEvents(now: number): Ev[] { return [...real, ...virtualEvents(now)]; }
 export function findEvent(id: string, now: number): Ev | undefined {
@@ -58,6 +87,7 @@ export function findEvent(id: string, now: number): Ev | undefined {
   const r = real.find((e) => e.id === id);
   if (r) return r;
   if (id.startsWith("v")) return virtualEvents(Number(id.slice(1, id.indexOf("-"))) * DAY).find((e) => e.id === id);
+  if (id.startsWith("x")) return virtualSports(Number(id.slice(1, id.indexOf("-"))) * DAY).find((e) => e.id === id);
   return undefined;
 }
 
@@ -69,6 +99,11 @@ export function simulate(e: Ev): Result {
     return { h: poissonSample(lh, rnd), a: poissonSample(la, rnd) };
   }
   const p = e.p[0] / 100;
+  if (e.sport === "tennis" || e.sport === "esports" || e.sport === "tabletennis" || e.sport === "volleyball") {
+    const n = e.sport === "tennis" || e.sport === "esports" ? 3 : 5, q = gameProb(e.p[0] / 100, n), need = Math.ceil(n / 2);
+    let h = 0, a = 0; while (h < need && a < need) { if (rnd() < q) h++; else a++; } return { h, a };
+  }
+  if (e.sport === "mma") { const w = rnd() < p; return { h: w ? 1 : 0, a: w ? 0 : 1, x: rnd() < 0.46 ? 1 : 0 }; }
   if (e.sport === "hockey") {
     const tot = 6, lh = tot * (0.5 + (p - 0.5) * 0.55);
     let h = poissonSample(lh, rnd), a = poissonSample(tot - lh, rnd);
@@ -76,7 +111,9 @@ export function simulate(e: Ev): Result {
     return { h, a };
   }
   const gauss = () => Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(2 * Math.PI * rnd());
-  const d = (invCdf(p) + gauss()) * 12.5, tot = 226 + gauss() * 14;
+  const ncaa = e.league.startsWith("NCAA"), nfl = e.sport === "americanfootball";
+  const sg = nfl ? 13.5 : ncaa ? 11 : 12.5, tm = nfl ? 45.5 : ncaa ? 141.5 : 226.5;
+  const d = (invCdf(p) + gauss()) * sg, tot = tm + gauss() * tm * 0.06;
   const h = Math.round((tot + d) / 2), a = Math.round((tot - d) / 2);
   return h === a ? { h: h + 1, a } : { h, a };
 }

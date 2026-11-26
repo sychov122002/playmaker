@@ -1,10 +1,11 @@
 // Upcoming fixtures (real pairings and kick-off times) with market win probabilities.
 // Snapshot of 2026-11-26. Times are UTC. Probabilities (%) are used to derive fair odds.
-import type { RawEvent } from "@/lib/types";
+import type { RawEvent, Sport } from "@/lib/types";
 
 const f = (league: string, h: string, a: string, t: string, ph: number, pd: number, pa: number): RawEvent => ({ sport: "football", league, home: h, away: a, start: `${t}:00Z`, p: [ph, pd, pa] });
-const b = (sport: "basketball" | "hockey", league: string, h: string, a: string, t: string, ph?: number): RawEvent => ({ sport, league, home: h, away: a, start: `${t}:00Z`, p: ph ? [ph, 0, 100 - ph] : undefined });
+const b = (sport: Sport, league: string, h: string, a: string, t: string, ph?: number): RawEvent => ({ sport, league, home: h, away: a, start: `${t}:00Z`, p: ph ? [ph, 0, 100 - ph] : undefined });
 
+const L1 = "Ligue 1", NFL = "NFL", NCAAB = "NCAA Basketball";
 const APL = "Premier League", LL = "La Liga", SA = "Serie A", BL = "Bundesliga", LCH = "Champions League", NBA = "NBA", NHL = "NHL";
 
 export const SNAPSHOT_DATE = "2026-11-26";
@@ -97,4 +98,53 @@ export const RAW_EVENTS: RawEvent[] = [
   b("hockey", NHL, "New York Islanders", "Winnipeg Jets", "2026-11-28T00:30"),
   b("hockey", NHL, "Buffalo Sabres", "Pittsburgh Penguins", "2026-11-28T01:00"),
   b("hockey", NHL, "Edmonton Oilers", "Seattle Kraken", "2026-11-28T01:00"),
+  // Ligue 1
+  f(L1, "Brest", "Paris FC", "2026-11-27T19:45", 28.4, 28, 43.6),
+  f(L1, "Angers", "Lens", "2026-11-28T16:15", 19.6, 22.8, 57.6),
+  f(L1, "Le Havre", "Strasbourg", "2026-11-28T19:45", 30.4, 27, 42.6),
+  f(L1, "Le Mans", "Lille", "2026-11-28T19:45", 26, 28, 46),
+  f(L1, "Nice", "Troyes", "2026-11-28T19:45", 57.3, 23.1, 19.6),
+  f(L1, "Paris Saint-Germain", "Lorient", "2026-11-28T19:45", 79.6, 13, 7.4),
+  f(L1, "Auxerre", "Marseille", "2026-11-29T14:00", 24.8, 24.6, 50.6),
+  f(L1, "Toulouse", "Rennes", "2026-11-29T16:15", 37.1, 26.7, 36.2),
+  f(L1, "Lyon", "Monaco", "2026-11-29T19:45", 39.6, 28.2, 32.2),
+  f(L1, "Toulouse", "Paris Saint-Germain", "2026-12-04T19:45", 15.2, 18.3, 66.5),
+  // NFL
+  b("americanfootball", NFL, "Detroit Lions", "Chicago Bears", "2026-11-26T18:00", 48.1),
+  b("americanfootball", NFL, "Dallas Cowboys", "Philadelphia Eagles", "2026-11-26T21:30", 79.2),
+  b("americanfootball", NFL, "Buffalo Bills", "Kansas City Chiefs", "2026-11-27T01:20", 59.4),
+  b("americanfootball", NFL, "Pittsburgh Steelers", "Denver Broncos", "2026-11-27T20:00", 32.9),
+  b("americanfootball", NFL, "Indianapolis Colts", "New York Giants", "2026-11-29T18:00", 29.4),
+  b("americanfootball", NFL, "Minnesota Vikings", "Atlanta Falcons", "2026-11-29T18:00", 74.3),
+  b("americanfootball", NFL, "Jacksonville Jaguars", "Tennessee Titans", "2026-11-29T18:00", 89.9),
+  b("americanfootball", NFL, "Houston Texans", "Baltimore Ravens", "2026-11-29T18:00", 72.5),
+  b("americanfootball", NFL, "Cincinnati Bengals", "New Orleans Saints", "2026-11-29T18:00", 81.5),
+  b("americanfootball", NFL, "Miami Dolphins", "New York Jets", "2026-11-29T18:00", 32.3),
+  b("americanfootball", NFL, "Los Angeles Chargers", "New England Patriots", "2026-11-29T21:05"),
+  b("americanfootball", NFL, "San Francisco 49ers", "Seattle Seahawks", "2026-11-29T21:25"),
+  b("americanfootball", NFL, "Arizona Cardinals", "Washington Commanders", "2026-11-29T21:25"),
+  b("americanfootball", NFL, "Cleveland Browns", "Las Vegas Raiders", "2026-11-30T01:20"),
+  b("americanfootball", NFL, "Tampa Bay Buccaneers", "Carolina Panthers", "2026-12-01T01:15"),
+  // NCAA basketball
+  b("basketball", NCAAB, "Cincinnati Bearcats", "Georgia Bulldogs", "2026-11-26T16:00", 56.5),
+  b("basketball", NCAAB, "UTSA Roadrunners", "Army Black Knights", "2026-11-26T17:00", 87.6),
+  b("basketball", NCAAB, "Purdue Boilermakers", "Oklahoma Sooners", "2026-11-26T17:00", 66.3),
+  b("basketball", NCAAB, "Maryland Terrapins", "San Diego State Aztecs", "2026-11-26T18:00", 63.7),
+  b("basketball", NCAAB, "UCF Knights", "Boston College Eagles", "2026-11-26T18:30", 53.4),
+  b("basketball", NCAAB, "Arizona State Sun Devils", "South Carolina Gamecocks", "2026-11-26T19:00", 69.3),
+  b("basketball", NCAAB, "Texas Longhorns", "Georgetown Hoyas", "2026-11-26T19:30", 76.7),
+  b("basketball", NCAAB, "Tennessee Volunteers", "Iowa State Cyclones", "2026-11-26T20:30", 37.9),
+  b("basketball", NCAAB, "Miami (FL) Hurricanes", "Michigan Wolverines", "2026-11-26T20:30", 56.6),
+  b("basketball", NCAAB, "Michigan State Spartans", "Arkansas Razorbacks", "2026-11-26T21:30", 67.5),
+  b("basketball", NCAAB, "USC Trojans", "Utah State Aggies", "2026-11-26T21:30"),
+  b("basketball", NCAAB, "UCLA Bruins", "Saint Mary's Gaels", "2026-11-26T22:00"),
+  b("basketball", NCAAB, "TCU Horned Frogs", "Creighton Bluejays", "2026-11-26T23:00"),
+  b("basketball", NCAAB, "Pittsburgh Panthers", "DePaul Blue Demons", "2026-11-27T00:00"),
+  b("basketball", NCAAB, "LSU Tigers", "SMU Mustangs", "2026-11-27T00:00"),
+  b("basketball", NCAAB, "Alabama Crimson Tide", "Kansas State Wildcats", "2026-11-27T02:00"),
+  b("basketball", NCAAB, "Louisville Cardinals", "St. John's Red Storm", "2026-11-27T02:00"),
+  b("basketball", NCAAB, "Texas Tech Red Raiders", "Oregon Ducks", "2026-11-27T04:30"),
+  b("basketball", NCAAB, "Baylor Bears", "Gonzaga Bulldogs", "2026-11-27T04:30"),
+  b("basketball", NCAAB, "Xavier Musketeers", "Virginia Cavaliers", "2026-11-27T16:00"),
+  b("basketball", NCAAB, "Wake Forest Demon Deacons", "Memphis Tigers", "2026-11-27T18:30"),
 ];

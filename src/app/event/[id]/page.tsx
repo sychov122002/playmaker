@@ -15,10 +15,10 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
   return (
     <div>
       <Link href="/" className="text-sm text-muted hover:text-ink">← Lines</Link>
-      <div className="mt-3 rounded-2xl border border-line bg-gradient-to-br from-[#4a3cff] to-[#8a4cff] text-white p-5 sm:p-7">
-        <div className="text-xs font-bold uppercase tracking-widest text-white/80">{ev.league}</div>
-        <h1 className="mt-2 text-2xl font-black sm:text-3xl">{ev.home} <span className="text-white/60">—</span> {ev.away}</h1>
-        <div className="mt-1 text-sm capitalize text-white/80">{fmtDay(ev.start)}, {fmtTime(ev.start)}</div>
+      <div className="mt-3 rounded-2xl border border-line bg-gradient-to-r from-panel to-[#2b2410] p-5 sm:p-7">
+        <div className="text-xs font-bold uppercase tracking-widest text-accent">{ev.league}</div>
+        <h1 className="mt-2 text-2xl font-black sm:text-3xl">{ev.home} <span className="text-muted">—</span> {ev.away}</h1>
+        <div className="mt-1 text-sm capitalize text-accent">{fmtDay(ev.start)}, {fmtTime(ev.start)}</div>
       </div>
       <div className="mt-4 space-y-3">
         {ev.markets.map((m) => (
