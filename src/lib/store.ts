@@ -6,7 +6,7 @@ import type { Bet, Ev, Leg, Limits, Msg, Profile, Settings, Tx } from "./types";
 
 export interface State {
   balance: number; slip: Leg[]; bets: Bet[]; mode: "single" | "express"; bonusAt: number;
-  profile: Profile; settings: Settings; limits: Limits; tx: Tx[]; promos: string[]; inbox: Msg[]; cashbackAt: number; favs: string[];
+  profile: Profile; settings: Settings; limits: Limits; tx: Tx[]; promos: string[]; inbox: Msg[]; cashbackAt: number; favs: string[]; claimed: string[];
 }
 const KEY = "playmaker.v3", START = 10000;
 const rid = () => Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -15,7 +15,7 @@ const fresh = (): State => ({
   profile: { id: `PM-${rid()}${rid().slice(0, 2)}`, nick: "Player", avatar: "🦊", createdAt: Date.now(), fullName: "", email: "", phone: "", country: "", birth: "", adult: false },
   settings: { odds: "decimal", notifyResults: true, notifyBonus: true, reality: 0, theme: "dark", quickStakes: [100, 500, 1000], confirmBet: false, oddsChange: "any" },
   limits: { maxStake: 0, dailyLoss: 0, excludeUntil: 0 },
-  tx: [{ id: "t0", at: Date.now(), type: "bonus", amount: START, note: "Welcome balance" }], promos: [], cashbackAt: 0, favs: [],
+  tx: [{ id: "t0", at: Date.now(), type: "bonus", amount: START, note: "Welcome balance" }], promos: [], cashbackAt: 0, favs: [], claimed: [],
   inbox: [{ id: "m0", at: Date.now(), icon: "👋", title: "Welcome to Playmaker", body: "You have 10,000 virtual coins. Check Promotions for boosts and cashback.", read: false }],
 });
 const initial: State = { ...fresh(), profile: { id: "PM-••••••", nick: "Player", avatar: "🦊", createdAt: 0, fullName: "", email: "", phone: "", country: "", birth: "", adult: false }, tx: [], inbox: [] };
@@ -198,4 +198,26 @@ export function loadCode(code: string, now: number): string | null {
     if (ev && ev.markets.some((m) => m.key === mk && m.outcomes.some((o) => o.key === ok))) { if (!state.slip.some((l) => l.eventId === id && l.marketKey === mk && l.outKey === ok)) toggleLeg(ev, mk, ok); added++; }
   }
   return added ? null : "No matches from this code are available any more";
+}
+
+// ---------- challenges ----------
+export interface Mission { id: string; title: string; hint: string; goal: number; reward: number; value: number; period: "daily" | "weekly" }
+const startOfWeek = () => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+export const periodKey = (p: "daily" | "weekly") => (p === "daily" ? new Date(startOfDay()).toDateString() : new Date(startOfWeek()).toDateString());
+export function missions(s: State): Mission[] {
+  const d = s.bets.filter((b) => b.at >= startOfDay()), w = s.bets.filter((b) => b.at >= startOfWeek());
+  const matches = (bs: Bet[]) => new Set(bs.flatMap((b) => b.legs.map((l) => l.eventId))).size;
+  return [
+    { id: "d-bets", title: "Place 3 bets", hint: "Any bets placed today", goal: 3, reward: 300, value: d.length, period: "daily" },
+    { id: "d-win", title: "Win a bet", hint: "Settle at least one winning bet today", goal: 1, reward: 400, value: d.filter((b) => b.status === "won").length, period: "daily" },
+    { id: "d-parlay", title: "Build a parlay of 3+ selections", hint: "Enjoy the parlay boost", goal: 1, reward: 350, value: d.filter((b) => b.mode === "express" && b.legs.length >= 3).length, period: "daily" },
+    { id: "w-matches", title: "Bet on 10 different matches", hint: "Across the week", goal: 10, reward: 1200, value: matches(w), period: "weekly" },
+    { id: "w-wins", title: "Win 5 bets", hint: "Across the week", goal: 5, reward: 1500, value: w.filter((b) => b.status === "won").length, period: "weekly" },
+    { id: "w-staked", title: "Stake 5,000 coins", hint: "Total stake this week", goal: 5000, reward: 800, value: w.reduce((a, b) => a + b.stake, 0), period: "weekly" },
+  ];
+}
+export const missionClaimed = (s: State, m: Mission) => s.claimed.includes(`${m.id}:${periodKey(m.period)}`);
+export function claimMission(id: string) {
+  const m = missions(state).find((x) => x.id === id); if (!m || m.value < m.goal || missionClaimed(state, m)) return;
+  set({ ...state, balance: state.balance + m.reward, claimed: [...state.claimed.slice(-60), `${m.id}:${periodKey(m.period)}`], tx: [tx("promo", m.reward, `Challenge: ${m.title}`), ...state.tx], inbox: [msg("🎯", "Challenge complete", `${m.title}: +${m.reward} coins`), ...state.inbox] });
 }

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const TABS = [["/account", "Overview", "👤"], ["/account/bets", "My bets", "🎫"], ["/account/profile", "Profile", "🪪"], ["/account/inbox", "Notifications", "🔔"], ["/account/wallet", "Wallet & bonuses", "👛"], ["/account/achievements", "Achievements", "🏆"], ["/account/limits", "Limits & safe play", "🛡️"], ["/account/settings", "Settings", "⚙️"], ["/account/help", "Help", "❓"]];
+const TABS = [["/account", "Overview", "👤"], ["/account/bets", "My bets", "🎫"], ["/account/profile", "Profile", "🪪"], ["/account/inbox", "Notifications", "🔔"], ["/account/wallet", "Wallet & bonuses", "👛"], ["/account/achievements", "Achievements", "🏆"], ["/challenges", "Challenges", "🎯"], ["/account/limits", "Limits & safe play", "🛡️"], ["/account/settings", "Settings", "⚙️"], ["/account/help", "Help", "❓"]];
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();

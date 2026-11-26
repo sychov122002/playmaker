@@ -7,7 +7,7 @@ import { bonusReady, claimBonus, markAllRead, remindBonus, setSettings, settle, 
 import { fmtCoins } from "@/lib/format";
 
 const NAV = [{ href: "/", t: "Lines" }, { href: "/live", t: "Live" }, { href: "/results", t: "Results" }, { href: "/promotions", t: "Promotions" }];
-const MENU: [string, string, string][] = [["/account", "Profile", "👤"], ["/account/bets", "My bets", "🎫"], ["/account/wallet", "Wallet", "👛"], ["/account/settings", "Settings", "⚙️"], ["/account/help", "Help", "❓"], ["/leaderboard", "Leaderboard", "🏅"]];
+const MENU: [string, string, string][] = [["/account", "Profile", "👤"], ["/account/bets", "My bets", "🎫"], ["/account/wallet", "Wallet", "👛"], ["/account/settings", "Settings", "⚙️"], ["/challenges", "Challenges", "🎯"], ["/account/help", "Help", "❓"], ["/leaderboard", "Leaderboard", "🏅"]];
 
 function useOutside(ref: React.RefObject<HTMLElement | null>, close: () => void) {
   useEffect(() => { const f = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); }; document.addEventListener("mousedown", f); return () => document.removeEventListener("mousedown", f); }, [ref, close]);
@@ -71,7 +71,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <aside className="sticky top-[72px] hidden h-[calc(100dvh-90px)] w-[330px] shrink-0 overflow-hidden rounded-2xl border border-line bg-panel lg:block"><Slip /></aside>
       </div>
       <footer className="border-t border-line px-5 py-5 pb-24 text-xs leading-relaxed text-muted lg:pb-5">
-        <div className="mb-2 flex flex-wrap gap-x-5 gap-y-1 font-semibold text-ink/70"><Link href="/promotions">Promotions</Link><Link href="/leaderboard">Leaderboard</Link><Link href="/results">Results</Link><Link href="/account/limits">Responsible play</Link><Link href="/account/help">Help</Link></div>
+        <div className="mb-2 flex flex-wrap gap-x-5 gap-y-1 font-semibold text-ink/70"><Link href="/promotions">Promotions</Link><Link href="/leaderboard">Leaderboard</Link><Link href="/challenges">Challenges</Link><Link href="/results">Results</Link><Link href="/account/limits">Responsible play</Link><Link href="/account/help">Help</Link></div>
         Playmaker is an entertainment game played with virtual coins. Coins have no cash value and cannot be bought or withdrawn. Fixtures and probabilities are based on real data, but results are drawn by a simulator, so they do not match real-life outcomes. 18+ only.
       </footer>
       {st.slip.length > 0 && !open && (
