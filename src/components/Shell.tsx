@@ -13,6 +13,7 @@ function useOutside(ref: React.RefObject<HTMLElement | null>, close: () => void)
   useEffect(() => { const f = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); }; document.addEventListener("mousedown", f); return () => document.removeEventListener("mousedown", f); }, [ref, close]);
 }
 
+import { logout } from "@/lib/store";
 import { liveReal } from "@/lib/events";
 import { startFeed, useFeedVersion } from "@/lib/feed";
 
@@ -58,13 +59,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
               )}
             </div>
             <Link href="/account/wallet" className="num whitespace-nowrap rounded-lg border border-line bg-panel px-2.5 py-1.5 text-sm font-extrabold">{fmtCoins(st.balance)} <span className="text-amber">🪙</span></Link>
-            <div ref={mref} className="relative">
+            {!st.profile.registered && <div className="flex items-center gap-1.5"><Link href="/login" className="hidden rounded-lg px-2.5 py-1.5 text-sm font-bold text-muted hover:text-ink sm:block">Log in</Link><Link href="/register" className="whitespace-nowrap rounded-lg bg-accent px-3 py-1.5 text-sm font-extrabold text-accent-ink">Sign up</Link></div>}
+            <div ref={mref} className={`relative ${st.profile.registered ? "" : "hidden sm:block"}`}>
               <button aria-label="Account menu" onClick={() => { setMenu(!menu); setBell(false); }} className="grid h-9 w-9 place-items-center rounded-lg bg-panel text-lg">{st.profile.avatar}</button>
               {menu && (
                 <div className="absolute right-0 top-11 z-40 w-60 overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl">
                   <Link href="/account" onClick={() => setMenu(false)} className="flex items-center gap-3 border-b border-line px-4 py-3"><span className="text-2xl">{st.profile.avatar}</span><span className="min-w-0"><span className="block truncate text-sm font-extrabold">{st.profile.nick}</span><span className="block text-xs text-muted">{st.profile.id}</span></span></Link>
                   {MENU.map(([h, t, i]) => <Link key={h} href={h} onClick={() => setMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold hover:bg-panel2"><span>{i}</span>{t}</Link>)}
                   <button onClick={() => setSettings({ theme: st.settings.theme === "dark" ? "light" : "dark" })} className="flex w-full items-center gap-3 border-t border-line px-4 py-2.5 text-left text-sm font-semibold hover:bg-panel2"><span>{st.settings.theme === "dark" ? "☀️" : "🌙"}</span>{st.settings.theme === "dark" ? "Light theme" : "Dark theme"}</button>
+                  {st.profile.registered ? <button onClick={() => { logout(); setMenu(false); }} className="flex w-full items-center gap-3 border-t border-line px-4 py-2.5 text-left text-sm font-semibold text-lose hover:bg-panel2"><span>🚪</span>Log out</button> : <Link href="/login" onClick={() => setMenu(false)} className="flex w-full items-center gap-3 border-t border-line px-4 py-2.5 text-sm font-semibold text-accent hover:bg-panel2"><span>🔑</span>Log in</Link>}
                 </div>
               )}
             </div>

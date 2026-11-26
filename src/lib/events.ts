@@ -1,5 +1,5 @@
 import { RAW_EVENTS } from "@/data/snapshot";
-import { feedAll, feedGet, type FeedEv } from "./feed";
+import { feedAll, feedGet, feedStatus, type FeedEv } from "./feed";
 import { fitLambdas, gameProb, invCdf, liveFootball, marketsFor } from "./odds";
 import { hash, mulberry32, poissonSample } from "./rng";
 import type { Ev, Market, RawEvent, Result, Sport } from "./types";
@@ -93,9 +93,9 @@ function virtualSports(now: number, past = false): Ev[] {
 
 export function upcoming(now: number): Ev[] {
   const fe = feedAll().filter((f) => f.state === "pre" && !f.off && f.start > now - 5 * 60e3).map(evFromFeed);
-  const list = [...real.filter((e) => e.start > now - 5 * 60e3 && !fe.some((f) => sameGame(f, e))), ...fe];
-  const extra = list.length < 40 ? virtualEvents(now) : [];
-  return [...list, ...extra, ...virtualSports(now)].sort((a, b) => a.start - b.start);
+  // The curated snapshot is only a fallback while the live feed is unreachable.
+  const list = fe.length || feedStatus() !== "offline" ? fe : real.filter((e) => e.start > now - 5 * 60e3);
+  return list.sort((a, b) => a.start - b.start);
 }
 export function allEvents(now: number): Ev[] { return [...real, ...virtualEvents(now)]; }
 export function findEvent(id: string, now: number): Ev | undefined {
@@ -176,9 +176,6 @@ export function liveNow(now: number): LiveMatch[] {
 
 /** Finished matches with simulated results, newest first. */
 export function resultsList(now: number): { ev: Ev; res: Result }[] {
-  const live = feedAll().filter((f) => f.done).map((f) => ({ ev: evFromFeed(f), res: { h: f.hs, a: f.as } as Result }));
-  const evs = [...virtualEvents(now), ...virtualSports(now, true)];
-  const seen = new Set<string>();
-  return evs.filter((e) => { if (seen.has(e.id)) return false; seen.add(e.id); return e.start + MATCH_MS[e.sport] <= now; })
-    .map((ev) => ({ ev, res: simulate(ev) })).concat(live).sort((a, b) => b.ev.start - a.ev.start).slice(0, 200);
+  void now;
+  return feedAll().filter((f) => f.done).map((f) => ({ ev: evFromFeed(f), res: { h: f.hs, a: f.as } as Result })).sort((a, b) => b.ev.start - a.ev.start).slice(0, 300);
 }

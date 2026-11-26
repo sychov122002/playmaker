@@ -32,8 +32,10 @@ function load() {
     state = { ...d, ...p, profile: { ...d.profile, ...p.profile }, settings: { ...d.settings, ...p.settings }, limits: { ...d.limits, ...p.limits } };
   } catch { /* storage unavailable */ }
 }
+let t0: ReturnType<typeof setTimeout> | undefined;
+function saveCurrentSoon() { clearTimeout(t0); t0 = setTimeout(() => saveCurrent(), 400); }
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ } }
-function set(next: State) { state = next; persist(); subs.forEach((f) => f()); }
+function set(next: State) { state = next; persist(); if (next.profile.registered) saveCurrentSoon(); subs.forEach((f) => f()); }
 export function useStore(): State {
   return useSyncExternalStore(
     (cb) => { load(); subs.add(cb); const t = setTimeout(cb, 0); return () => { subs.delete(cb); clearTimeout(t); }; },
@@ -221,3 +223,38 @@ export function claimMission(id: string) {
   const m = missions(state).find((x) => x.id === id); if (!m || m.value < m.goal || missionClaimed(state, m)) return;
   set({ ...state, balance: state.balance + m.reward, claimed: [...state.claimed.slice(-60), `${m.id}:${periodKey(m.period)}`], tx: [tx("promo", m.reward, `Challenge: ${m.title}`), ...state.tx], inbox: [msg("🎯", "Challenge complete", `${m.title}: +${m.reward} coins`), ...state.inbox] });
 }
+
+// ---------- accounts (kept in this browser only) ----------
+const ACC = "playmaker.accounts";
+type Saved = { pwd: string; data: State };
+const readAcc = (): Record<string, Saved> => { try { return JSON.parse(localStorage.getItem(ACC) ?? "{}"); } catch { return {}; } };
+const writeAcc = (a: Record<string, Saved>) => { try { localStorage.setItem(ACC, JSON.stringify(a)); } catch { /* ignore */ } };
+async function hashPwd(email: string, pwd: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`playmaker:${email}:${pwd}`));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+const saveCurrent = () => { const e = state.profile.email.toLowerCase(); if (state.profile.registered && e) { const a = readAcc(); if (a[e]) { a[e].data = state; writeAcc(a); } } };
+export interface SignUp { nick: string; email: string; password: string; birth: string; country: string; promo: string }
+export const ageOf = (birth: string, now = Date.now()) => { const b = new Date(birth).getTime(); return isFinite(b) ? Math.floor((now - b) / (365.25 * 86400e3)) : 0; };
+export async function register(f: SignUp): Promise<string | null> {
+  const email = f.email.trim().toLowerCase();
+  if (f.nick.trim().length < 3) return "Nickname must be at least 3 characters";
+  if (!/^\S+@\S+\.\S+$/.test(email)) return "Enter a valid email";
+  if (f.password.length < 8) return "Password must be at least 8 characters";
+  if (ageOf(f.birth) < 18) return "You must be 18 or older";
+  const a = readAcc(); if (a[email]) return "This email is already registered. Log in instead.";
+  if (f.promo.trim() && (!PROMOS[f.promo.trim().toUpperCase()])) return "Unknown promo code";
+  const nextProfile = { ...state.profile, nick: f.nick.trim().slice(0, 20), email, birth: f.birth, country: f.country, adult: true, registered: true };
+  set({ ...state, profile: nextProfile, inbox: [msg("🎉", "Welcome to Playmaker", "Your account is ready. Daily bonus and challenges are waiting."), ...state.inbox] });
+  if (f.promo.trim()) redeemPromo(f.promo);
+  a[email] = { pwd: await hashPwd(email, f.password), data: state }; writeAcc(a);
+  return null;
+}
+export async function login(emailIn: string, password: string): Promise<string | null> {
+  const email = emailIn.trim().toLowerCase(), a = readAcc(), acc = a[email];
+  if (!acc || acc.pwd !== (await hashPwd(email, password))) return "Wrong email or password";
+  const d = fresh(); set({ ...d, ...acc.data, profile: { ...d.profile, ...acc.data.profile }, settings: { ...d.settings, ...acc.data.settings }, limits: { ...d.limits, ...acc.data.limits } });
+  return null;
+}
+export function logout() { saveCurrent(); const d = fresh(); set({ ...d, settings: state.settings }); }
+export const hasAccounts = () => Object.keys(readAcc()).length > 0;

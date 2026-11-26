@@ -15,15 +15,13 @@ export const SPORTS: { id: Sport; name: string; icon: string; virtual?: boolean 
   { id: "hockey", name: "Ice Hockey", icon: "🏒" },
   { id: "basketball", name: "Basketball", icon: "🏀" },
   { id: "americanfootball", name: "American Football", icon: "🏈" },
-  { id: "tennis", name: "Tennis", icon: "🎾", virtual: true },
-  { id: "esports", name: "Esports", icon: "🎮", virtual: true },
-  { id: "tabletennis", name: "Table Tennis", icon: "🏓", virtual: true },
-  { id: "volleyball", name: "Volleyball", icon: "🏐", virtual: true },
-  { id: "mma", name: "MMA", icon: "🥊", virtual: true },
+  { id: "tennis", name: "Tennis", icon: "🎾" },
+  { id: "volleyball", name: "Volleyball", icon: "🏐" },
+  { id: "mma", name: "MMA", icon: "🥊" },
 ];
 export interface Tx { id: string; at: number; type: "bet" | "win" | "bonus" | "promo" | "cashout" | "reset" | "cashback"; amount: number; note: string }
 export type OddsFormat = "decimal" | "fractional" | "american";
 export interface Settings { odds: OddsFormat; notifyResults: boolean; notifyBonus: boolean; reality: 0 | 30 | 60; theme: "dark" | "light"; quickStakes: [number, number, number]; confirmBet: boolean; oddsChange: "any" | "higher" | "never" }
 export interface Limits { maxStake: number; dailyLoss: number; excludeUntil: number }
-export interface Profile { id: string; nick: string; avatar: string; createdAt: number; fullName: string; email: string; phone: string; country: string; birth: string; adult: boolean }
+export interface Profile { id: string; nick: string; avatar: string; createdAt: number; fullName: string; email: string; phone: string; country: string; birth: string; adult: boolean; registered?: boolean }
 export interface Msg { id: string; at: number; icon: string; title: string; body: string; read: boolean }

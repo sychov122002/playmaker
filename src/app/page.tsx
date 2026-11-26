@@ -6,7 +6,7 @@ import { TopMatches } from "@/components/TopMatches";
 import { upcoming } from "@/lib/events";
 import { dayKey, fmtDay } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
-import { useFeedVersion } from "@/lib/feed";
+import { feedStatus, useFeedVersion } from "@/lib/feed";
 import { SPORTS, type Sport } from "@/lib/types";
 import { useStore } from "@/lib/store";
 
@@ -38,7 +38,7 @@ export default function Lines() {
         <div className="sticky top-[72px] space-y-3">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search teams or leagues" className="h-10 w-full rounded-xl bg-panel px-3 text-sm outline-none ring-1 ring-line focus:ring-accent" />
           <div className="rounded-2xl bg-panel p-1.5">
-            {SPORTS.map((s) => (
+            {SPORTS.filter((s) => !now || all.length === 0 || count(s.id) > 0 || s.id === sport).map((s) => (
               <div key={s.id}>
                 <button onClick={() => { setSport(s.id); setLeague(""); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold ${sport === s.id ? "bg-panel2 text-accent" : "text-ink/85 hover:bg-panel2"}`}>
                   <span className="w-6 text-center text-lg">{s.icon}</span><span className="flex-1 truncate">{s.name}</span><span className="num text-xs text-muted">{now ? count(s.id) : ""}</span>
@@ -57,7 +57,7 @@ export default function Lines() {
       <div className="min-w-0 flex-1">
         <PromoCarousel />
         <div className="scroll-x -mx-1 mb-3 flex gap-1.5 px-1 lg:hidden">
-          {SPORTS.map((s) => (
+          {SPORTS.filter((s) => !now || all.length === 0 || count(s.id) > 0 || s.id === sport).map((s) => (
             <button key={s.id} onClick={() => { setSport(s.id); setLeague(""); }} className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3.5 py-2 text-[11px] font-bold ${sport === s.id ? "bg-accent text-accent-ink" : "bg-panel text-muted"}`}><span className="text-xl leading-none">{s.icon}</span><span className="whitespace-nowrap">{s.name}</span></button>
           ))}
         </div>
@@ -71,9 +71,8 @@ export default function Lines() {
           {WHEN.map(([k, t]) => <button key={k} onClick={() => setWhen(k)} className={`h-8 shrink-0 rounded-full px-3 text-xs font-bold ${when === k ? "bg-accent text-accent-ink" : "bg-panel text-muted"}`}>{t}</button>)}
         </div>
         {sport === "football" && !league && !q && !favOnly && when === "all" && <TopMatches events={top} />}
-        {info?.virtual && <div className="mb-3 rounded-xl border border-amber/30 bg-amber/10 px-4 py-2.5 text-xs text-amber">Virtual {info.name.toLowerCase()}: fictional players and teams, odds and results are simulated.</div>}
-        {!now && <div className="space-y-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-panel" />)}</div>}
-        {now > 0 && list.length === 0 && <div className="rounded-xl bg-panel p-8 text-center text-muted">{favOnly ? "No favorites yet. Tap ☆ next to a match." : "Nothing found."}</div>}
+        {(!now || (feedStatus() === "loading" && all.length === 0)) && <div className="space-y-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-panel" />)}</div>}
+        {now > 0 && !(feedStatus() === "loading" && all.length === 0) && list.length === 0 && <div className="rounded-xl bg-panel p-8 text-center text-muted">{favOnly ? "No favorites yet. Tap ☆ next to a match." : "Nothing found."}</div>}
         <div className="space-y-5">
           {[...days].map(([k, evs]) => (
             <section key={k}>
