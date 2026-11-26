@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f1f3fb; --panel: #ffffff; --panel2: #f5f6fd; --line: #e1e5f2; --text: #12162b; --muted: #6a7392;
+  --accent: #4a3cff; --accent-ink: #ffffff; --win: #0f9d58; --lose: #e5384d; --amber: #d97f00; --hot: #ff2e7a;
+}
+@theme inline {
+  --color-bg: var(--bg); --color-panel: var(--panel); --color-panel2: var(--panel2); --color-line: var(--line);
+  --color-ink: var(--text); --color-muted: var(--muted); --color-accent: var(--accent); --color-accent-ink: var(--accent-ink);
+  --color-win: var(--win); --color-lose: var(--lose); --color-amber: var(--amber);
+}
+html { color-scheme: light; }
+body { background: radial-gradient(900px 420px at 85% -10%, #dcd9ff 0%, transparent 60%), radial-gradient(700px 380px at -5% 0%, #ffe0ef 0%, transparent 55%), var(--bg); color: var(--text); font-family: ui-sans-serif, "Inter", system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+.num { font-variant-numeric: tabular-nums; }
+.odd { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; height: 42px; padding: 0 10px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 0 rgba(18,22,43,.04); font-weight: 800; font-size: 14px; transition: transform .08s, background .15s, border-color .15s; }
+.odd:hover { border-color: var(--accent); background: #f1f0ff; }
+.odd:active { transform: scale(.97); }
+.odd small { color: var(--muted); font-weight: 600; font-size: 11px; }
+.odd[data-on="true"] { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 16px -6px rgba(74,60,255,.7); }
+.odd[data-on="true"] small { color: #cfcaff; }
+.scroll-x { overflow-x: auto; scrollbar-width: none; }
+.scroll-x::-webkit-scrollbar { display: none; }
+@keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.live-dot { width: 8px; height: 8px; border-radius: 99px; background: var(--hot); animation: pulse-dot 1.2s infinite; }
+@keyframes pop { 0% { transform: scale(.9); opacity: 0 } 100% { transform: none; opacity: 1 } }
+.pop { animation: pop .18s ease-out; }
