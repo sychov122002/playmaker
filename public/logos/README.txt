@@ -1,0 +1,3 @@
+Put team logo files here as PNG, named by team in lowercase with dashes:
+  arsenal.png, manchester-city.png, real-madrid.png, bayern-munich.png ...
+Teams without a file automatically get a club-colour shield badge.

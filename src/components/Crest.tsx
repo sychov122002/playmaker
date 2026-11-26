@@ -1,4 +1,8 @@
+"use client";
+import { useState } from "react";
 import { hash } from "@/lib/rng";
+
+export const logoSlug = (n: string) => n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // Own badge design in each club's traditional colours: [main, stripe/accent]. No official logos are used.
 const C: Record<string, [string, string]> = {
@@ -41,6 +45,8 @@ function light(c: string) {
 }
 
 export function Crest({ name, size = 28 }: { name: string; size?: number }) {
+  const [broken, setBroken] = useState(false);
+  if (!broken) return <img src={`/logos/${logoSlug(name)}.png`} alt="" width={size} height={size} loading="lazy" onError={() => setBroken(true)} className="shrink-0 object-contain" style={{ width: size, height: size }} />;
   const [a, b] = colors(name);
   const ini = name.replace(/[^A-Za-zÀ-ÿ0-9 ]/g, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   const ink = light(a) ? (light(b) ? "#111" : b) : "#fff";
