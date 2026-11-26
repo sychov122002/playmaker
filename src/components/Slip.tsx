@@ -1,22 +1,25 @@
 "use client";
 import { useState } from "react";
-import { clearSlip, MIN_STAKE, placeBet, removeLeg, setMode, useStore } from "@/lib/store";
+import { clearSlip, MIN_STAKE, parlayBoost, placeBet, removeLeg, setMode, useStore } from "@/lib/store";
 import { fmtCoins, fmtOdds } from "@/lib/format";
 
 export function Slip({ onDone }: { onDone?: () => void }) {
   const st = useStore();
   const [stakes, setStakes] = useState<number[]>([]);
   const [err, setErr] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
+  const [ok, setOk] = useState(false), [sure, setSure] = useState(false);
   const legs = st.slip;
   const singles = st.mode === "single" || legs.length === 1;
   const stake = (i: number) => stakes[singles ? i : 0] ?? 0;
-  const setStake = (i: number, v: number) => { const n = [...stakes]; n[singles ? i : 0] = v; setStakes(n); setErr(null); };
+  const setStake = (i: number, v: number) => { const n = [...stakes]; n[singles ? i : 0] = v; setStakes(n); setErr(null); setSure(false); };
   const exprOdds = legs.reduce((p, l) => p * l.odds, 1);
   const total = singles ? legs.reduce((s, _, i) => s + stake(i), 0) : stake(0);
-  const win = singles ? legs.reduce((s, l, i) => s + stake(i) * l.odds, 0) : stake(0) * exprOdds;
+  const boost = singles ? 0 : parlayBoost(legs);
+  const win = singles ? legs.reduce((s, l, i) => s + stake(i) * l.odds, 0) : stake(0) * exprOdds * (1 + boost);
 
   const submit = () => {
+    if (st.settings.confirmBet && !sure) { setSure(true); return; }
+    setSure(false);
     const e = placeBet(singles ? legs.map((_, i) => stake(i)) : [stake(0)]);
     if (e) { setErr(e); return; }
     setStakes([]); setOk(true); setTimeout(() => setOk(false), 2500); onDone?.();
@@ -41,31 +44,33 @@ export function Slip({ onDone }: { onDone?: () => void }) {
               <div className="min-w-0"><div className="truncate text-[13px] font-bold">{l.title}</div><div className="truncate text-xs text-muted">{l.market}: <span className="text-ink">{l.label}</span></div></div>
               <div className="flex items-center gap-2"><span className="num font-extrabold text-accent">{fmtOdds(l.odds, st.settings.odds)}</span><button aria-label="Remove" onClick={() => removeLeg(i)} className="text-muted hover:text-lose">✕</button></div>
             </div>
-            {singles && <StakeInput v={stake(i)} on={(v) => setStake(i, v)} />}
+            {singles && <StakeInput quick={st.settings.quickStakes} v={stake(i)} on={(v) => setStake(i, v)} />}
           </div>
         ))}
-        {!singles && legs.length > 1 && <StakeInput v={stake(0)} on={(v) => setStake(0, v)} label="Parlay stake" />}
+        {!singles && legs.length > 0 && legs.length < 3 && <div className="rounded-xl bg-accent/10 p-3 text-xs text-accent">🚀 Add {3 - legs.length} more selection{legs.length === 2 ? "" : "s"} (odds 1.20+) to unlock a +5% parlay boost.</div>}
+        {!singles && legs.length > 1 && <StakeInput quick={st.settings.quickStakes} v={stake(0)} on={(v) => setStake(0, v)} label="Parlay stake" />}
       </div>
       <div className="space-y-2 border-t border-line p-4">
         {legs.length > 1 && !singles && <Row k="Total odds" v={fmtOdds(exprOdds, st.settings.odds)} />}
+        {boost > 0 && <Row k="Parlay boost" v={`+${Math.round(boost * 100)}%`} />}
         <Row k="Stake" v={`${fmtCoins(total)} 🪙`} />
         <Row k="Potential win" v={`${fmtCoins(win)} 🪙`} strong />
         {err && <div className="text-sm text-lose">{err}</div>}
         {ok && <div className="pop text-sm text-win">Bet placed! Track it in My bets.</div>}
-        <button disabled={!legs.length} onClick={submit} className="h-12 w-full rounded-xl bg-accent text-[15px] font-extrabold text-accent-ink transition active:scale-[.98] disabled:opacity-40">Place bet</button>
+        <button disabled={!legs.length} onClick={submit} className="h-12 w-full rounded-xl bg-accent text-[15px] font-extrabold text-accent-ink transition active:scale-[.98] disabled:opacity-40">{sure ? "Confirm bet" : "Place bet"}</button>
         <p className="text-center text-[11px] leading-snug text-muted">Virtual coins with no cash value. Outcomes are simulated.</p>
       </div>
     </div>
   );
 }
 const Row = ({ k, v, strong }: { k: string; v: string; strong?: boolean }) => <div className="flex justify-between text-sm"><span className="text-muted">{k}</span><span className={`num ${strong ? "font-extrabold text-ink" : "font-bold"}`}>{v}</span></div>;
-function StakeInput({ v, on, label }: { v: number; on: (n: number) => void; label?: string }) {
+function StakeInput({ v, on, label, quick }: { v: number; on: (n: number) => void; label?: string; quick: number[] }) {
   return (
     <div className="mt-2">
       {label && <div className="mb-1 text-xs text-muted">{label}</div>}
       <div className="flex gap-1.5">
         <input inputMode="numeric" placeholder={`min ${MIN_STAKE}`} value={v || ""} onChange={(e) => on(Math.max(0, parseInt(e.target.value.replace(/\D/g, "") || "0", 10)))} className="num h-9 min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 text-sm font-bold outline-none focus:border-accent" />
-        {[100, 500, 1000].map((n) => <button key={n} onClick={() => on(n)} className="h-9 rounded-lg border border-line px-2 text-xs font-bold text-muted hover:text-ink">{n}</button>)}
+        {quick.map((n) => <button key={n} onClick={() => on(n)} className="h-9 rounded-lg border border-line px-2 text-xs font-bold text-muted hover:text-ink">{n}</button>)}
       </div>
     </div>
   );

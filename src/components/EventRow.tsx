@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Crest } from "./Crest";
 import { OddsBtn } from "./OddsBtn";
 import { fmtTime } from "@/lib/format";
 import type { Ev } from "@/lib/types";
@@ -33,7 +34,7 @@ export function EventRow({ ev }: { ev: Ev }) {
       <div className="hidden items-center gap-1.5 md:grid" style={GRID(cols.length)}>
         <Link href={`/event/${ev.id}`} className="flex min-w-0 items-center gap-3 pr-2">
           <span className="num w-11 shrink-0 text-xs font-bold text-muted">{fmtTime(ev.start)}</span>
-          <span className="min-w-0 text-[13.5px] font-semibold leading-tight"><span className="block truncate">{ev.home}</span><span className="block truncate">{ev.away}</span></span>
+          <span className="min-w-0 text-[13.5px] font-semibold leading-tight"><span className="flex items-center gap-2 truncate"><Crest name={ev.home} size={18} />{ev.home}</span><span className="mt-1 flex items-center gap-2 truncate"><Crest name={ev.away} size={18} />{ev.away}</span></span>
         </Link>
         {cols.map((c) => <OddsBtn key={c.head} ev={ev} mk={c.mk} out={c.out} tag={c.tag ?? ""} />)}
         <Link href={`/event/${ev.id}`} className="grid h-9 place-items-center rounded-lg bg-panel2 text-xs font-bold text-muted hover:text-accent">{extra > 0 ? `+${extra}` : "›"}</Link>
@@ -41,7 +42,7 @@ export function EventRow({ ev }: { ev: Ev }) {
       <div className="md:hidden">
         <Link href={`/event/${ev.id}`} className="mb-2 flex items-center gap-3">
           <span className="num w-11 shrink-0 text-xs font-bold text-muted">{fmtTime(ev.start)}</span>
-          <span className="min-w-0 flex-1 text-sm font-semibold leading-tight"><span className="block truncate">{ev.home}</span><span className="block truncate">{ev.away}</span></span>
+          <span className="min-w-0 flex-1 text-sm font-semibold leading-tight"><span className="flex items-center gap-2 truncate"><Crest name={ev.home} size={18} />{ev.home}</span><span className="mt-1 flex items-center gap-2 truncate"><Crest name={ev.away} size={18} />{ev.away}</span></span>
           <span className="rounded-md bg-panel2 px-2 py-1 text-[11px] font-bold text-muted">{extra > 0 ? `+${extra}` : "›"}</span>
         </Link>
         <div className={`grid gap-1.5 ${cols.length > 4 && ev.sport === "football" ? "grid-cols-3" : "grid-cols-3"}`}>

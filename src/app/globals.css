@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0d0e11; --panel: #17191e; --panel2: #1f2229; --line: #2a2e37; --text: #f1f2f5; --muted: #8b93a3;
-  --accent: #ffc21a; --accent-ink: #14110a; --win: #3ddc84; --lose: #ff5468; --amber: #ffa21a; --hot: #ff3b4e;
+  --bg: #0b0b0e; --panel: #15151a; --panel2: #202027; --line: #2d2d36; --text: #f3f3f6; --muted: #9a9aa8;
+  --accent: #8b6cff; --accent-ink: #ffffff; --win: #3ddc84; --lose: #ff5468; --amber: #ffbf3d; --hot: #ff4d6a;
+}
+:root[data-theme="light"] {
+  --bg: #f0f0f3; --panel: #ffffff; --panel2: #f1f1f5; --line: #e0e0e8; --text: #15151a; --muted: #6c6c7a;
+  --accent: #6d4aff; --accent-ink: #ffffff; --win: #0f9d58; --lose: #e5384d; --amber: #b87400;
 }
 @theme inline {
   --color-bg: var(--bg); --color-panel: var(--panel); --color-panel2: var(--panel2); --color-line: var(--line);
@@ -10,18 +14,23 @@
   --color-win: var(--win); --color-lose: var(--lose); --color-amber: var(--amber);
 }
 html { color-scheme: dark; }
-body { background: linear-gradient(180deg, #14161c 0, var(--bg) 360px); color: var(--text); font-family: ui-sans-serif, "Inter", system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+:root[data-theme="light"] { color-scheme: light; }
+body { background: var(--bg); color: var(--text); font-family: ui-sans-serif, "Inter", system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
 .num { font-variant-numeric: tabular-nums; }
 /* odds buttons */
 .odd { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; height: 36px; padding: 0 6px; border-radius: 8px; background: var(--panel2); border: 1px solid transparent; font-weight: 800; font-size: 13.5px; transition: transform .08s, background .15s, color .15s; }
-.odd:hover { background: #2a2e38; color: var(--accent); }
+.odd:hover { background: color-mix(in srgb, var(--panel2) 80%, var(--accent) 20%); color: var(--accent); }
 .odd:active { transform: scale(.97); }
 .odd small { color: var(--muted); font-weight: 600; font-size: 10.5px; }
 .odd[data-on="true"], .odd[data-on="true"]:hover { background: var(--accent); color: var(--accent-ink); }
-.odd[data-on="true"] small { color: #5a4a10; }
+.odd[data-on="true"] small { color: color-mix(in srgb, var(--accent-ink) 60%, transparent); }
 .scroll-x { overflow-x: auto; scrollbar-width: none; }
 .scroll-x::-webkit-scrollbar { display: none; }
 @keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
 .live-dot { width: 8px; height: 8px; border-radius: 99px; background: var(--hot); animation: pulse-dot 1.2s infinite; }
 @keyframes pop { 0% { transform: scale(.9); opacity: 0 } 100% { transform: none; opacity: 1 } }
 .pop { animation: pop .18s ease-out; }
+
+.hero-grad { background: linear-gradient(110deg, #15151a 0%, #231b4a 60%, #8b6cff 200%); }
+@keyframes slide-in { from { opacity: 0; transform: translateX(14px) } to { opacity: 1; transform: none } }
+.slide-in { animation: slide-in .35s ease-out; }

@@ -30,3 +30,10 @@ describe("odds", () => {
     expect(evalOutcome("dc", "1X", 1, 1)).toBe(true);
   });
 });
+
+import { parlayBoost } from "./store";
+describe("parlayBoost", () => {
+  const L = (n: number, o = 1.5) => Array.from({ length: n }, () => ({ odds: o })) as never;
+  it("scales with legs", () => { expect(parlayBoost(L(2))).toBe(0); expect(parlayBoost(L(3))).toBe(0.05); expect(parlayBoost(L(6))).toBe(0.25); });
+  it("needs odds >= 1.20", () => expect(parlayBoost(L(4, 1.1))).toBe(0));
+});

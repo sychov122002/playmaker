@@ -9,7 +9,7 @@ export interface Ev {
 export interface Result { h: number; a: number; x?: number }
 export interface Leg { eventId: string; title: string; market: string; marketKey: string; outKey: string; label: string; odds: number }
 export type BetStatus = "pending" | "won" | "lost";
-export interface Bet { cashedOut?: boolean; id: string; at: number; mode: "single" | "express"; stake: number; legs: Leg[]; odds: number; status: BetStatus; payout: number; legStatus: Record<string, BetStatus> }
+export interface Bet { cashedOut?: boolean; boost?: number; id: string; at: number; mode: "single" | "express"; stake: number; legs: Leg[]; odds: number; status: BetStatus; payout: number; legStatus: Record<string, BetStatus> }
 export const SPORTS: { id: Sport; name: string; icon: string; virtual?: boolean }[] = [
   { id: "football", name: "Football", icon: "⚽" },
   { id: "hockey", name: "Ice Hockey", icon: "🏒" },
@@ -21,8 +21,9 @@ export const SPORTS: { id: Sport; name: string; icon: string; virtual?: boolean 
   { id: "volleyball", name: "Volleyball", icon: "🏐", virtual: true },
   { id: "mma", name: "MMA", icon: "🥊", virtual: true },
 ];
-export interface Tx { id: string; at: number; type: "bet" | "win" | "bonus" | "promo" | "cashout" | "reset"; amount: number; note: string }
+export interface Tx { id: string; at: number; type: "bet" | "win" | "bonus" | "promo" | "cashout" | "reset" | "cashback"; amount: number; note: string }
 export type OddsFormat = "decimal" | "fractional" | "american";
-export interface Settings { odds: OddsFormat; notifyResults: boolean; notifyBonus: boolean; reality: 0 | 30 | 60 }
+export interface Settings { odds: OddsFormat; notifyResults: boolean; notifyBonus: boolean; reality: 0 | 30 | 60; theme: "dark" | "light"; quickStakes: [number, number, number]; confirmBet: boolean; oddsChange: "any" | "higher" | "never" }
 export interface Limits { maxStake: number; dailyLoss: number; excludeUntil: number }
-export interface Profile { id: string; nick: string; avatar: string; createdAt: number }
+export interface Profile { id: string; nick: string; avatar: string; createdAt: number; fullName: string; email: string; phone: string; country: string; birth: string; adult: boolean }
+export interface Msg { id: string; at: number; icon: string; title: string; body: string; read: boolean }

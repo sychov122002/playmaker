@@ -2,22 +2,23 @@
 import { useSyncExternalStore } from "react";
 import { evalOutcome } from "./odds";
 import { findEvent, resultOf } from "./events";
-import type { Bet, Ev, Leg, Limits, Profile, Settings, Tx } from "./types";
+import type { Bet, Ev, Leg, Limits, Msg, Profile, Settings, Tx } from "./types";
 
 export interface State {
   balance: number; slip: Leg[]; bets: Bet[]; mode: "single" | "express"; bonusAt: number;
-  profile: Profile; settings: Settings; limits: Limits; tx: Tx[]; promos: string[];
+  profile: Profile; settings: Settings; limits: Limits; tx: Tx[]; promos: string[]; inbox: Msg[]; cashbackAt: number;
 }
-const KEY = "playmaker.v2", START = 10000;
+const KEY = "playmaker.v3", START = 10000;
 const rid = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 const fresh = (): State => ({
   balance: START, slip: [], bets: [], mode: "single", bonusAt: 0,
-  profile: { id: `PM-${rid()}${rid().slice(0, 2)}`, nick: "Player", avatar: "🦊", createdAt: Date.now() },
-  settings: { odds: "decimal", notifyResults: true, notifyBonus: true, reality: 0 },
+  profile: { id: `PM-${rid()}${rid().slice(0, 2)}`, nick: "Player", avatar: "🦊", createdAt: Date.now(), fullName: "", email: "", phone: "", country: "", birth: "", adult: false },
+  settings: { odds: "decimal", notifyResults: true, notifyBonus: true, reality: 0, theme: "dark", quickStakes: [100, 500, 1000], confirmBet: false, oddsChange: "any" },
   limits: { maxStake: 0, dailyLoss: 0, excludeUntil: 0 },
-  tx: [{ id: "t0", at: Date.now(), type: "bonus", amount: START, note: "Welcome balance" }], promos: [],
+  tx: [{ id: "t0", at: Date.now(), type: "bonus", amount: START, note: "Welcome balance" }], promos: [], cashbackAt: 0,
+  inbox: [{ id: "m0", at: Date.now(), icon: "👋", title: "Welcome to Playmaker", body: "You have 10,000 virtual coins. Check Promotions for boosts and cashback.", read: false }],
 });
-const initial: State = { ...fresh(), profile: { id: "PM-••••••", nick: "Player", avatar: "🦊", createdAt: 0 }, tx: [] };
+const initial: State = { ...fresh(), profile: { id: "PM-••••••", nick: "Player", avatar: "🦊", createdAt: 0, fullName: "", email: "", phone: "", country: "", birth: "", adult: false }, tx: [], inbox: [] };
 let state: State = initial;
 const subs = new Set<() => void>();
 let loaded = false;
@@ -40,6 +41,10 @@ export function useStore(): State {
     () => initial,
   );
 }
+export const markAllRead = () => set({ ...state, inbox: state.inbox.map((m) => ({ ...m, read: true })) });
+export const clearInbox = () => set({ ...state, inbox: [] });
+const msg = (icon: string, title: string, body: string): Msg => ({ id: `${Date.now()}${rid()}`, at: Date.now(), icon, title, body, read: false });
+export function remindBonus() { const id = `bonus-${new Date().toDateString()}`; if (state.settings.notifyBonus && bonusReady(state) && !state.inbox.some((m) => m.id === id)) set({ ...state, inbox: [{ ...msg("🎁", "Daily bonus is ready", "Claim your free 1,000 coins in Wallet."), id }, ...state.inbox] }); }
 const tx = (type: Tx["type"], amount: number, note: string): Tx => ({ id: `${Date.now()}${rid()}`, at: Date.now(), type, amount, note });
 
 // ---------- slip ----------
@@ -69,6 +74,16 @@ export function redeemPromo(code: string): string | null {
 }
 export function resetAccount() { const d = fresh(); set({ ...d, profile: { ...d.profile, nick: state.profile.nick, avatar: state.profile.avatar }, settings: state.settings }); }
 
+// ---------- cashback ----------
+export const CASHBACK_RATE = 0.05;
+export function cashbackInfo(s: State, now: number) {
+  const since = Math.max(s.cashbackAt, now - 7 * 86400e3);
+  const loss = -s.tx.filter((t) => t.at >= since && ["bet", "win", "cashout"].includes(t.type)).reduce((a, t) => a + t.amount, 0);
+  const amount = Math.floor(Math.max(0, loss) * CASHBACK_RATE), nextAt = s.cashbackAt + 7 * 86400e3;
+  return { loss: Math.max(0, loss), amount, ready: amount >= 1 && now >= nextAt, nextAt };
+}
+export function claimCashback() { const i = cashbackInfo(state, Date.now()); if (!i.ready) return; set({ ...state, balance: state.balance + i.amount, cashbackAt: Date.now(), tx: [tx("cashback", i.amount, "Weekly cashback 5%"), ...state.tx], inbox: [msg("💰", "Cashback received", `+${i.amount} coins`), ...state.inbox] }); }
+
 // ---------- profile / settings / limits ----------
 export const setProfile = (p: Partial<Profile>) => set({ ...state, profile: { ...state.profile, ...p } });
 export const setSettings = (p: Partial<Settings>) => set({ ...state, settings: { ...state.settings, ...p } });
@@ -81,7 +96,7 @@ const startOfDay = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return 
 export const lossToday = (s: State) => -s.tx.filter((t) => t.at >= startOfDay() && ["bet", "win", "cashout"].includes(t.type)).reduce((a, t) => a + t.amount, 0);
 
 export function placeBet(stakes: number[]): string | null {
-  const legs = state.slip; if (!legs.length) return "Bet slip is empty";
+  let legs = state.slip; if (!legs.length) return "Bet slip is empty";
   if (state.limits.excludeUntil > Date.now()) return `Self-exclusion is active until ${new Date(state.limits.excludeUntil).toLocaleString("en-GB")}`;
   const singles = state.mode === "single" || legs.length === 1;
   const need = singles ? legs.length : 1;
@@ -90,13 +105,18 @@ export function placeBet(stakes: number[]): string | null {
   if (state.limits.maxStake > 0 && used.some((s) => s > state.limits.maxStake)) return `Your max stake limit is ${state.limits.maxStake} coins`;
   if (state.limits.dailyLoss > 0 && lossToday(state) + total > state.limits.dailyLoss) return "This bet would exceed your daily loss limit";
   if (total > state.balance) return "Not enough coins";
+  // odds-change policy
+  const nowT = Date.now(); let moved = false; const fixed = legs.map((l) => { const c = currentOdds(l, nowT); if (c === null) { moved = true; return l; } if (Math.abs(c - l.odds) < 0.005) return l; const worse = c < l.odds; if (state.settings.oddsChange === "never" || (state.settings.oddsChange === "higher" && worse)) moved = true; return { ...l, odds: c }; });
+  if (moved || fixed.some((l, i) => l !== legs[i])) { set({ ...state, slip: fixed }); if (moved) return "Odds changed — please review your slip and confirm again"; legs = fixed; }
   const now = Date.now(), bets: Bet[] = singles
     ? legs.map((l, i) => ({ id: `${now}-${i}`, at: now, mode: "single" as const, stake: used[i], legs: [l], odds: l.odds, status: "pending" as const, payout: 0, legStatus: {} }))
-    : [{ id: `${now}`, at: now, mode: "express" as const, stake: used[0], legs, odds: Math.round(legs.reduce((p, l) => p * l.odds, 1) * 100) / 100, status: "pending" as const, payout: 0, legStatus: {} }];
+    : [{ id: `${now}`, at: now, mode: "express" as const, boost: parlayBoost(legs), stake: used[0], legs, odds: Math.round(legs.reduce((p, l) => p * l.odds, 1) * 100) / 100, status: "pending" as const, payout: 0, legStatus: {} }];
   set({ ...state, balance: state.balance - total, bets: [...bets, ...state.bets], slip: [], tx: [...bets.map((b) => tx("bet", -b.stake, b.mode === "express" ? `Parlay ×${b.legs.length}` : b.legs[0].title)), ...state.tx] });
   return null;
 }
 
+/** Parlay boost: +5/10/15/25% to winnings for 3/4/5/6+ legs, each at odds of 1.20+. */
+export function parlayBoost(legs: Leg[]): number { if (legs.length < 3 || legs.some((l) => l.odds < 1.2)) return 0; return legs.length >= 6 ? 0.25 : legs.length === 5 ? 0.15 : legs.length === 4 ? 0.1 : 0.05; }
 const legKey = (l: Leg) => l.eventId + l.marketKey + l.outKey;
 /** Current odds of a leg, or null if the market is unavailable. */
 function currentOdds(l: Leg, now: number): number | null {
@@ -124,7 +144,7 @@ export function cashOut(id: string): string | null {
 
 /** Settles bets whose events have finished. */
 export function settle(now = Date.now()) {
-  let changed = false, balance = state.balance; const newTx: Tx[] = [];
+  let changed = false, balance = state.balance; const newTx: Tx[] = [], newMsgs: Msg[] = [];
   const bets = state.bets.map((b) => {
     if (b.status !== "pending") return b;
     const legStatus = { ...b.legStatus };
@@ -138,11 +158,11 @@ export function settle(now = Date.now()) {
     const lost = vals.includes("lost"), won = vals.every((v) => v === "won");
     if (!lost && !won && JSON.stringify(legStatus) === JSON.stringify(b.legStatus)) return b;
     changed = true;
-    if (lost) return { ...b, legStatus, status: "lost" as const };
-    if (won) { const payout = Math.floor(b.stake * b.odds); balance += payout; newTx.push(tx("win", payout, b.legs.length > 1 ? `Parlay ×${b.legs.length} won` : `${b.legs[0].title} won`)); return { ...b, legStatus, status: "won" as const, payout }; }
+    if (lost) { if (state.settings.notifyResults) newMsgs.push(msg("📉", "Bet lost", b.legs.length > 1 ? `Parlay ×${b.legs.length}` : b.legs[0].title)); return { ...b, legStatus, status: "lost" as const }; }
+    if (won) { const payout = Math.floor(b.stake * b.odds * (1 + (b.boost ?? 0))); balance += payout; newTx.push(tx("win", payout, b.legs.length > 1 ? `Parlay ×${b.legs.length} won` : `${b.legs[0].title} won`)); if (state.settings.notifyResults) newMsgs.push(msg("🏆", "Bet won", `${b.legs.length > 1 ? `Parlay ×${b.legs.length}` : b.legs[0].title}: +${payout} coins`)); return { ...b, legStatus, status: "won" as const, payout }; }
     return { ...b, legStatus };
   });
-  if (changed) set({ ...state, bets, balance, tx: [...newTx, ...state.tx] });
+  if (changed) set({ ...state, bets, balance, tx: [...newTx, ...state.tx], inbox: [...newMsgs, ...state.inbox].slice(0, 80) });
 }
 
 // ---------- stats ----------

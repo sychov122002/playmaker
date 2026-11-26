@@ -20,6 +20,16 @@ export default function Settings() {
         <div className="mt-4 text-sm text-muted">Avatar</div>
         <div className="mt-2 flex flex-wrap gap-2">{AVATARS.map((a) => <button key={a} onClick={() => setProfile({ avatar: a })} className={`grid h-12 w-12 place-items-center rounded-xl text-2xl ${st.profile.avatar === a ? "bg-accent" : "bg-panel2"}`}>{a}</button>)}</div>
       </Card>
+      <Card title="Appearance">
+        <div className="grid grid-cols-2 gap-2">{(["dark", "light"] as const).map((t) => <button key={t} onClick={() => setSettings({ theme: t })} className={`rounded-xl p-3 text-sm font-bold capitalize ${st.settings.theme === t ? "bg-accent text-accent-ink" : "bg-panel2"}`}>{t === "dark" ? "🌙" : "☀️"} {t}</button>)}</div>
+      </Card>
+      <Card title="Betting">
+        <div className="mb-1 text-sm text-muted">Quick stakes</div>
+        <div className="grid grid-cols-3 gap-2">{[0, 1, 2].map((i) => <input key={i} type="number" min={10} value={st.settings.quickStakes[i]} onChange={(e) => { const q = [...st.settings.quickStakes] as [number, number, number]; q[i] = Math.max(0, Math.floor(+e.target.value || 0)); setSettings({ quickStakes: q }); }} className="num h-10 rounded-lg bg-panel2 px-3 text-center font-bold outline-none ring-1 ring-line focus:ring-accent" />)}</div>
+        <div className="mt-3"><Toggle on={st.settings.confirmBet} set={(v) => setSettings({ confirmBet: v })} label="Confirm before placing a bet" hint="Adds a second tap to avoid mistakes" /></div>
+        <div className="mb-1 mt-3 text-sm text-muted">When odds change</div>
+        <div className="grid grid-cols-3 gap-2">{([["any", "Accept any"], ["higher", "Accept higher"], ["never", "Never accept"]] as const).map(([id, t]) => <button key={id} onClick={() => setSettings({ oddsChange: id })} className={`rounded-xl p-3 text-xs font-bold ${st.settings.oddsChange === id ? "bg-accent text-accent-ink" : "bg-panel2"}`}>{t}</button>)}</div>
+      </Card>
       <Card title="Odds format">
         <div className="grid grid-cols-3 gap-2">
           {([["decimal", "Decimal"], ["fractional", "Fractional"], ["american", "American"]] as [OddsFormat, string][]).map(([id, t]) => (

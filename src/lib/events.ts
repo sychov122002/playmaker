@@ -60,15 +60,15 @@ const VSPORTS: { sport: Sport; league: string; kind: "p" | "t"; n: number; fixed
   { sport: "volleyball", league: "Virtual Volleyball League", kind: "t", n: 5 },
   { sport: "mma", league: "Virtual Fight Night", kind: "p", n: 6 },
 ];
-function virtualSports(now: number): Ev[] {
+function virtualSports(now: number, past = false): Ev[] {
   const out: Ev[] = [], day0 = Math.floor(now / DAY);
-  for (let d = 0; d < 3; d++) for (const v of VSPORTS) {
+  for (let d = past ? -3 : 0; d < (past ? 1 : 3); d++) for (const v of VSPORTS) {
     const rnd = mulberry32(hash(`${v.league}${day0 + d}`));
     const name = () => (v.kind === "p" ? `${FIRST[Math.floor(rnd() * FIRST.length)]} ${LAST[Math.floor(rnd() * LAST.length)]}` : `${ADJ[Math.floor(rnd() * ADJ.length)]} ${NOUN[Math.floor(rnd() * NOUN.length)]}`);
     for (let k = 0; k < v.n; k++) {
       const home = name(); let away = name(); if (away === home) away += " II";
       const start = (day0 + d) * DAY + (9 + k * (v.sport === "tabletennis" ? 0.9 : 1.4)) * 3600e3;
-      if (start < now - 5 * 60e3) continue;
+      if (!past && start < now - 5 * 60e3) continue;
       const ph = 22 + rnd() * 56;
       out.push(build({ sport: v.sport, league: v.league, home, away, start: new Date(start).toISOString(), p: [ph, 0, 100 - ph] }, `x${day0 + d}-${hash(v.league + k)}`, true));
     }
@@ -153,4 +153,12 @@ export function liveMatch(id: string, now: number): LiveMatch | null {
 export function liveNow(now: number): LiveMatch[] {
   const slot = Math.floor(now / LIVE_SLOT);
   return [0, 1, 2, 3].map((n) => liveMatch(`L${slot}-${n}`, now)!);
+}
+
+/** Finished matches with simulated results, newest first. */
+export function resultsList(now: number): { ev: Ev; res: Result }[] {
+  const evs = [...real, ...virtualEvents(now), ...virtualSports(now, true)];
+  const seen = new Set<string>();
+  return evs.filter((e) => { if (seen.has(e.id)) return false; seen.add(e.id); return e.start + MATCH_MS[e.sport] <= now; })
+    .map((ev) => ({ ev, res: simulate(ev) })).sort((a, b) => b.ev.start - a.ev.start).slice(0, 200);
 }

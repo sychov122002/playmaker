@@ -4,7 +4,7 @@ import { Btn, Card } from "@/components/ui";
 import { fmtCoins } from "@/lib/format";
 import { bonusReady, claimBonus, PROMOS, redeemPromo, useStore } from "@/lib/store";
 
-const ICON: Record<string, string> = { bet: "🎫", win: "🏆", bonus: "🎁", promo: "🏷️", cashout: "💸", reset: "♻️" };
+const ICON: Record<string, string> = { bet: "🎫", win: "🏆", bonus: "🎁", promo: "🏷️", cashout: "💸", reset: "♻️", cashback: "💰" };
 
 export default function Wallet() {
   const st = useStore();
