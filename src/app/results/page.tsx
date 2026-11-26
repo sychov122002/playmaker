@@ -4,12 +4,14 @@ import { Crest } from "@/components/Crest";
 import { resultsList } from "@/lib/events";
 import { dayKey, fmtDay, fmtTime } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
+import { useFeedVersion } from "@/lib/feed";
 import { SPORTS, type Sport } from "@/lib/types";
 
 export default function Results() {
   const now = useNow(60000);
   const [sport, setSport] = useState<Sport | "">("");
-  const all = useMemo(() => (now ? resultsList(now) : []), [now]);
+  const fv = useFeedVersion();
+  const all = useMemo(() => (now ? resultsList(now) : []), [now, fv]); // eslint-disable-line react-hooks/exhaustive-deps
   const list = all.filter((r) => !sport || r.ev.sport === sport);
   const days = new Map<string, typeof list>();
   for (const r of list) days.set(dayKey(r.ev.start), [...(days.get(dayKey(r.ev.start)) ?? []), r]);
@@ -30,7 +32,7 @@ export default function Results() {
                 <div key={ev.id} className="flex items-center gap-3 px-3 py-3 text-sm">
                   <div className="w-12 shrink-0 text-xs text-muted"><div className="num">{fmtTime(ev.start)}</div><div className="truncate">FT</div></div>
                   <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-2"><Crest name={ev.home} size={20} /><span className="truncate font-bold">{ev.home}</span></div>
+                    <div className="flex items-center gap-2"><Crest name={ev.home} size={20} /><span className="truncate font-bold">{ev.home}</span>{ev.virtual && <span className="rounded bg-amber/15 px-1 text-[9px] font-bold uppercase text-amber">virtual</span>}</div>
                     <div className="flex items-center gap-2"><Crest name={ev.away} size={20} /><span className="truncate font-bold">{ev.away}</span></div>
                   </div>
                   <div className="num space-y-1 text-right text-base font-black"><div className={res.h > res.a ? "text-accent" : ""}>{res.h}</div><div className={res.a > res.h ? "text-accent" : ""}>{res.a}</div></div>

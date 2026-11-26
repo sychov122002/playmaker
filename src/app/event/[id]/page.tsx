@@ -6,11 +6,13 @@ import { OddsBtn } from "@/components/OddsBtn";
 import { findEvent } from "@/lib/events";
 import { fmtDay, fmtTime } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
+import { useFeedVersion } from "@/lib/feed";
 
 const GROUPS: [string, (k: string) => boolean][] = [["All", () => true], ["Main", (k) => ["1x2", "ml", "dc", "dist"].includes(k)], ["Totals", (k) => k.startsWith("tot_") || k === "btts"], ["Handicaps", (k) => k.startsWith("hcp_")]];
 
 export default function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  useFeedVersion();
   const now = useNow(30000);
   const [tab, setTab] = useState(0);
   if (!now) return <div className="h-40 animate-pulse rounded-2xl bg-panel" />;

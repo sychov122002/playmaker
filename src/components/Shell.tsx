@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Slip } from "./Slip";
 import { bonusReady, claimBonus, markAllRead, remindBonus, setSettings, settle, useStore } from "@/lib/store";
 import { fmtCoins } from "@/lib/format";
@@ -13,11 +13,17 @@ function useOutside(ref: React.RefObject<HTMLElement | null>, close: () => void)
   useEffect(() => { const f = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); }; document.addEventListener("mousedown", f); return () => document.removeEventListener("mousedown", f); }, [ref, close]);
 }
 
+import { liveReal } from "@/lib/events";
+import { startFeed, useFeedVersion } from "@/lib/feed";
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname(), st = useStore();
   const [open, setOpen] = useState(false), [menu, setMenu] = useState(false), [bell, setBell] = useState(false), [reality, setReality] = useState(0);
   const mref = useRef<HTMLDivElement>(null), bref = useRef<HTMLDivElement>(null);
   useOutside(mref, () => setMenu(false)); useOutside(bref, () => setBell(false));
+  useFeedVersion(); const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+  const liveCount = mounted ? liveReal().length : 0;
+  useEffect(() => { startFeed(); }, []);
   useEffect(() => { settle(); remindBonus(); const t = setInterval(() => { settle(); remindBonus(); }, 2000); return () => clearInterval(t); }, []);
   useEffect(() => { document.documentElement.dataset.theme = st.settings.theme; }, [st.settings.theme]);
   useEffect(() => {
@@ -33,7 +39,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex h-14 items-center gap-2 px-3 sm:gap-3 sm:px-5">
           <Link href="/" className="flex items-center gap-2 font-black tracking-tight"><span className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-accent-ink">P</span><span className="hidden text-lg sm:block">Playmaker</span></Link>
           <nav className="ml-1 flex gap-0.5 text-sm font-bold sm:ml-3 sm:gap-1">
-            {NAV.map((n) => <Link key={n.href} href={n.href} className={`${n.href === "/results" || n.href === "/promotions" ? "hidden md:block " : ""}whitespace-nowrap rounded-lg px-2.5 py-1.5 sm:px-3 ${active(n.href) ? "bg-panel2 text-accent" : "text-muted hover:text-ink"}`}>{n.t}</Link>)}
+            {NAV.map((n) => <Link key={n.href} href={n.href} className={`${n.href === "/results" || n.href === "/promotions" ? "hidden md:block " : ""}whitespace-nowrap rounded-lg px-2.5 py-1.5 sm:px-3 ${active(n.href) ? "bg-panel2 text-accent" : "text-muted hover:text-ink"}`}>{n.t}{n.href === "/live" && liveCount > 0 && <span className="ml-1.5 rounded-full bg-[color:var(--hot)] px-1.5 text-[10px] text-white">{liveCount}</span>}</Link>)}
             <Link href="/account/bets" className={`hidden sm:block whitespace-nowrap rounded-lg px-2.5 py-1.5 sm:px-3 ${path.startsWith("/account/bets") ? "bg-panel2 text-accent" : "text-muted hover:text-ink"}`}>My bets{pending > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px] text-accent-ink">{pending}</span>}</Link>
           </nav>
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">

@@ -6,6 +6,7 @@ import { TopMatches } from "@/components/TopMatches";
 import { upcoming } from "@/lib/events";
 import { dayKey, fmtDay } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
+import { useFeedVersion } from "@/lib/feed";
 import { SPORTS, type Sport } from "@/lib/types";
 import { useStore } from "@/lib/store";
 
@@ -14,12 +15,13 @@ const WHEN = [["all", "All"], ["3h", "Next 3h"], ["today", "Today"], ["tomorrow"
 const TOP = ["Champions League", "Premier League", "La Liga", "Serie A", "Bundesliga"];
 
 export default function Lines() {
+  const fv = useFeedVersion();
   const now = useNow(30000);
   const [sport, setSport] = useState<Sport>("football");
   const [league, setLeague] = useState("");
   const [q, setQ] = useState(""), [when, setWhen] = useState<(typeof WHEN)[number][0]>("all"), [favOnly, setFavOnly] = useState(false);
   const favs = useStore().favs;
-  const all = useMemo(() => (now ? upcoming(now) : []), [now]);
+  const all = useMemo(() => (now ? upcoming(now) : []), [now, fv]); // eslint-disable-line react-hooks/exhaustive-deps
   const count = (s: Sport) => all.filter((e) => e.sport === s).length;
   const ofSport = all.filter((e) => e.sport === sport);
   const leagues = [...new Set(ofSport.map((e) => e.league))].map((l) => ({ l, n: ofSport.filter((e) => e.league === l).length }));

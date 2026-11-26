@@ -1,4 +1,5 @@
 import { RAW_EVENTS } from "@/data/snapshot";
+import { feedAll, feedGet, type FeedEv } from "./feed";
 import { fitLambdas, gameProb, invCdf, liveFootball, marketsFor } from "./odds";
 import { hash, mulberry32, poissonSample } from "./rng";
 import type { Ev, Market, RawEvent, Result, Sport } from "./types";
@@ -60,6 +61,20 @@ const VSPORTS: { sport: Sport; league: string; kind: "p" | "t"; n: number; fixed
   { sport: "volleyball", league: "Virtual Volleyball League", kind: "t", n: 5 },
   { sport: "mma", league: "Virtual Fight Night", kind: "p", n: 6 },
 ];
+const norm = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "").split(" ")[0];
+const sameGame = (a: { home: string; away: string; start: number }, b: { home: string; away: string; start: number }) => norm(a.home) === norm(b.home) && norm(a.away) === norm(b.away) && Math.abs(a.start - b.start) < 36 * 3600e3;
+/** Real match from the live feed -> bettable event (live football gets in-play odds, other in-play sports are display only). */
+export function evFromFeed(f: FeedEv): Ev {
+  const ev = build({ sport: f.sport, league: f.league, home: f.home, away: f.away, start: new Date(f.start).toISOString(), p: f.p }, f.id);
+  if (f.state === "in") {
+    ev.inplay = { minute: f.minute, hs: f.hs, as: f.as, clock: f.clock };
+    if (f.sport === "football" && f.minute < 88) { const [lh, la] = fitLambdas(f.p[0], f.p[1], f.p[2]); ev.markets = liveFootball(lh, la, f.minute, f.hs, f.as); } else ev.markets = [];
+  } else if (f.state === "post" || f.off) ev.markets = [];
+  return ev;
+}
+const feedMatch = (e: Ev) => feedAll().find((f) => sameGame(f, e));
+export const liveReal = (): Ev[] => feedAll().filter((f) => f.state === "in" && !f.off).sort((a, b) => a.start - b.start).map(evFromFeed);
+
 function virtualSports(now: number, past = false): Ev[] {
   const out: Ev[] = [], day0 = Math.floor(now / DAY);
   for (let d = past ? -3 : 0; d < (past ? 1 : 3); d++) for (const v of VSPORTS) {
@@ -77,13 +92,15 @@ function virtualSports(now: number, past = false): Ev[] {
 }
 
 export function upcoming(now: number): Ev[] {
-  const list = real.filter((e) => e.start > now - 5 * 60e3);
+  const fe = feedAll().filter((f) => f.state === "pre" && !f.off && f.start > now - 5 * 60e3).map(evFromFeed);
+  const list = [...real.filter((e) => e.start > now - 5 * 60e3 && !fe.some((f) => sameGame(f, e))), ...fe];
   const extra = list.length < 40 ? virtualEvents(now) : [];
   return [...list, ...extra, ...virtualSports(now)].sort((a, b) => a.start - b.start);
 }
 export function allEvents(now: number): Ev[] { return [...real, ...virtualEvents(now)]; }
 export function findEvent(id: string, now: number): Ev | undefined {
   if (id.startsWith("L")) return liveMatch(id, now)?.ev;
+  if (id.startsWith("R")) { const f = feedGet(id); return f ? evFromFeed(f) : undefined; }
   const r = real.find((e) => e.id === id);
   if (r) return r;
   if (id.startsWith("v")) return virtualEvents(Number(id.slice(1, id.indexOf("-"))) * DAY).find((e) => e.id === id);
@@ -120,6 +137,8 @@ export function simulate(e: Ev): Result {
 
 export function resultOf(e: Ev, now: number): Result | null {
   if (e.live) { const m = liveMatch(e.id, now); return m && m.done ? m.res : null; }
+  if (e.id.startsWith("R")) { const f = feedGet(e.id); return f?.done ? { h: f.hs, a: f.as } : null; }
+  if (!e.virtual) { const f = feedMatch(e); if (f) return f.done ? { h: f.hs, a: f.as } : null; }
   return now >= e.start + MATCH_MS[e.sport] ? simulate(e) : null;
 }
 
@@ -157,8 +176,9 @@ export function liveNow(now: number): LiveMatch[] {
 
 /** Finished matches with simulated results, newest first. */
 export function resultsList(now: number): { ev: Ev; res: Result }[] {
-  const evs = [...real, ...virtualEvents(now), ...virtualSports(now, true)];
+  const live = feedAll().filter((f) => f.done).map((f) => ({ ev: evFromFeed(f), res: { h: f.hs, a: f.as } as Result }));
+  const evs = [...virtualEvents(now), ...virtualSports(now, true)];
   const seen = new Set<string>();
   return evs.filter((e) => { if (seen.has(e.id)) return false; seen.add(e.id); return e.start + MATCH_MS[e.sport] <= now; })
-    .map((ev) => ({ ev, res: simulate(ev) })).sort((a, b) => b.ev.start - a.ev.start).slice(0, 200);
+    .map((ev) => ({ ev, res: simulate(ev) })).concat(live).sort((a, b) => b.ev.start - a.ev.start).slice(0, 200);
 }

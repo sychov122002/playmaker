@@ -4,7 +4,7 @@ export interface Outcome { key: string; label: string; odds: number }
 export interface Market { key: string; title: string; outcomes: Outcome[] }
 export interface Ev {
   id: string; sport: Sport; league: string; home: string; away: string; start: number;
-  p: [number, number, number]; markets: Market[]; virtual?: boolean; live?: boolean;
+  p: [number, number, number]; markets: Market[]; virtual?: boolean; live?: boolean; inplay?: { minute: number; hs: number; as: number; clock: string };
 }
 export interface Result { h: number; a: number; x?: number }
 export interface Leg { eventId: string; title: string; market: string; marketKey: string; outKey: string; label: string; odds: number }
