@@ -6,7 +6,7 @@ import type { Bet, Ev, Leg, Limits, Msg, Profile, Settings, Tx } from "./types";
 
 export interface State {
   balance: number; slip: Leg[]; bets: Bet[]; mode: "single" | "express"; bonusAt: number;
-  profile: Profile; settings: Settings; limits: Limits; tx: Tx[]; promos: string[]; inbox: Msg[]; cashbackAt: number;
+  profile: Profile; settings: Settings; limits: Limits; tx: Tx[]; promos: string[]; inbox: Msg[]; cashbackAt: number; favs: string[];
 }
 const KEY = "playmaker.v3", START = 10000;
 const rid = () => Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -15,7 +15,7 @@ const fresh = (): State => ({
   profile: { id: `PM-${rid()}${rid().slice(0, 2)}`, nick: "Player", avatar: "🦊", createdAt: Date.now(), fullName: "", email: "", phone: "", country: "", birth: "", adult: false },
   settings: { odds: "decimal", notifyResults: true, notifyBonus: true, reality: 0, theme: "dark", quickStakes: [100, 500, 1000], confirmBet: false, oddsChange: "any" },
   limits: { maxStake: 0, dailyLoss: 0, excludeUntil: 0 },
-  tx: [{ id: "t0", at: Date.now(), type: "bonus", amount: START, note: "Welcome balance" }], promos: [], cashbackAt: 0,
+  tx: [{ id: "t0", at: Date.now(), type: "bonus", amount: START, note: "Welcome balance" }], promos: [], cashbackAt: 0, favs: [],
   inbox: [{ id: "m0", at: Date.now(), icon: "👋", title: "Welcome to Playmaker", body: "You have 10,000 virtual coins. Check Promotions for boosts and cashback.", read: false }],
 });
 const initial: State = { ...fresh(), profile: { id: "PM-••••••", nick: "Player", avatar: "🦊", createdAt: 0, fullName: "", email: "", phone: "", country: "", birth: "", adult: false }, tx: [], inbox: [] };
@@ -184,4 +184,18 @@ export function tierOf(totalStaked: number) {
   let i = 0; TIERS.forEach((t, n) => { if (totalStaked >= t[1]) i = n; });
   const next = TIERS[i + 1];
   return { name: TIERS[i][0], index: i, next: next?.[0] ?? null, progress: next ? (totalStaked - TIERS[i][1]) / (next[1] - TIERS[i][1]) : 1, need: next ? next[1] - totalStaked : 0 };
+}
+
+export const toggleFav = (id: string) => set({ ...state, favs: state.favs.includes(id) ? state.favs.filter((x) => x !== id) : [...state.favs, id] });
+/** Booking code: the slip serialised as text so it can be shared and loaded again. */
+export const slipCode = (legs: Leg[]) => btoa(legs.map((l) => `${l.eventId}|${l.marketKey}|${l.outKey}`).join(";")).replace(/=+$/, "");
+export function loadCode(code: string, now: number): string | null {
+  let parts: string[][];
+  try { parts = atob(code.trim()).split(";").map((x) => x.split("|")); } catch { return "Invalid code"; }
+  let added = 0;
+  for (const [id, mk, ok] of parts) {
+    const ev = id && mk && ok ? findEvent(id, now) : null;
+    if (ev && ev.markets.some((m) => m.key === mk && m.outcomes.some((o) => o.key === ok))) { if (!state.slip.some((l) => l.eventId === id && l.marketKey === mk && l.outKey === ok)) toggleLeg(ev, mk, ok); added++; }
+  }
+  return added ? null : "No matches from this code are available any more";
 }

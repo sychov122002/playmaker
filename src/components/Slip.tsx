@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
-import { clearSlip, MIN_STAKE, parlayBoost, placeBet, removeLeg, setMode, useStore } from "@/lib/store";
+import { clearSlip, loadCode, MIN_STAKE, parlayBoost, placeBet, removeLeg, setMode, slipCode, useStore } from "@/lib/store";
 import { fmtCoins, fmtOdds } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 
 export function Slip({ onDone }: { onDone?: () => void }) {
   const st = useStore();
@@ -9,6 +10,9 @@ export function Slip({ onDone }: { onDone?: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState(false), [sure, setSure] = useState(false);
   const legs = st.slip;
+  const now = useNow(60000);
+  const [code, setCode] = useState(""), [cmsg, setCmsg] = useState<string | null>(null);
+  const share = async () => { const c = slipCode(legs); try { await navigator.clipboard.writeText(c); setCmsg("Code copied: " + c.slice(0, 12) + "…"); } catch { setCmsg(c); } };
   const singles = st.mode === "single" || legs.length === 1;
   const stake = (i: number) => stakes[singles ? i : 0] ?? 0;
   const setStake = (i: number, v: number) => { const n = [...stakes]; n[singles ? i : 0] = v; setStakes(n); setErr(null); setSure(false); };
@@ -29,8 +33,10 @@ export function Slip({ onDone }: { onDone?: () => void }) {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <div className="text-[15px] font-extrabold">Bet slip {legs.length > 0 && <span className="ml-1 rounded-full bg-accent px-2 py-0.5 text-xs text-accent-ink">{legs.length}</span>}</div>
-        {legs.length > 0 && <button onClick={clearSlip} className="text-xs text-muted hover:text-ink">Clear</button>}
+        <div className="flex gap-3">{legs.length > 0 && <button onClick={share} className="text-xs font-bold text-accent">Share code</button>}{legs.length > 0 && <button onClick={clearSlip} className="text-xs text-muted hover:text-ink">Clear</button>}</div>
       </div>
+      <div className="mx-4 mb-2 flex gap-1.5"><input value={code} onChange={(e) => { setCode(e.target.value); setCmsg(null); }} placeholder="Have a slip code?" className="h-8 min-w-0 flex-1 rounded-lg bg-panel2 px-2.5 text-xs outline-none ring-1 ring-line focus:ring-accent" /><button onClick={() => { const e = loadCode(code, now); setCmsg(e ?? "Loaded"); if (!e) setCode(""); }} disabled={!code.trim()} className="h-8 rounded-lg bg-panel2 px-3 text-xs font-bold text-accent disabled:opacity-40">Load</button></div>
+      {cmsg && <div className="mx-4 mb-2 break-all text-[11px] text-muted">{cmsg}</div>}
       <div className="mx-4 mb-3 grid grid-cols-2 rounded-xl border border-line bg-bg p-1 text-sm font-bold">
         {(["single", "express"] as const).map((m) => (
           <button key={m} onClick={() => setMode(m)} className={`rounded-lg py-1.5 ${st.mode === m ? "bg-panel2 text-accent" : "text-muted"}`}>{m === "single" ? "Singles" : "Parlay"}</button>

@@ -7,6 +7,9 @@ import { upcoming } from "@/lib/events";
 import { dayKey, fmtDay } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { SPORTS, type Sport } from "@/lib/types";
+import { useStore } from "@/lib/store";
+
+const WHEN = [["all", "All"], ["3h", "Next 3h"], ["today", "Today"], ["tomorrow", "Tomorrow"]] as const;
 
 const TOP = ["Champions League", "Premier League", "La Liga", "Serie A", "Bundesliga"];
 
@@ -14,12 +17,14 @@ export default function Lines() {
   const now = useNow(30000);
   const [sport, setSport] = useState<Sport>("football");
   const [league, setLeague] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(""), [when, setWhen] = useState<(typeof WHEN)[number][0]>("all"), [favOnly, setFavOnly] = useState(false);
+  const favs = useStore().favs;
   const all = useMemo(() => (now ? upcoming(now) : []), [now]);
   const count = (s: Sport) => all.filter((e) => e.sport === s).length;
   const ofSport = all.filter((e) => e.sport === sport);
   const leagues = [...new Set(ofSport.map((e) => e.league))].map((l) => ({ l, n: ofSport.filter((e) => e.league === l).length }));
-  const list = ofSport.filter((e) => (!league || e.league === league) && (!q || (e.home + e.away + e.league).toLowerCase().includes(q.toLowerCase())));
+  const inWhen = (t: number) => when === "all" || (when === "3h" ? t < now + 3 * 3600e3 : dayKey(t) === dayKey(now + (when === "tomorrow" ? 86400e3 : 0)));
+  const list = (favOnly ? all.filter((e) => favs.includes(e.id)) : ofSport).filter((e) => inWhen(e.start) && (favOnly || !league || e.league === league) && (!q || (e.home + e.away + e.league).toLowerCase().includes(q.toLowerCase())));
   const days = new Map<string, typeof list>();
   for (const e of list) days.set(dayKey(e.start), [...(days.get(dayKey(e.start)) ?? []), e]);
   const top = useMemo(() => all.filter((e) => e.sport === "football" && !e.virtual && TOP.includes(e.league)).sort((a, b) => TOP.indexOf(a.league) - TOP.indexOf(b.league) || a.start - b.start).slice(0, 8), [all]);
@@ -59,10 +64,14 @@ export default function Lines() {
           {["", ...leagues.map((x) => x.l)].map((l) => <button key={l} onClick={() => setLeague(l)} className={`h-8 shrink-0 rounded-full px-3 text-xs font-bold ${league === l ? "bg-accent text-accent-ink" : "bg-panel text-muted"}`}>{l || "All"}</button>)}
         </div>
 
-        {sport === "football" && !league && !q && <TopMatches events={top} />}
+        <div className="scroll-x mb-3 flex gap-1.5">
+          <button onClick={() => setFavOnly(!favOnly)} className={`h-8 shrink-0 rounded-full px-3 text-xs font-bold ${favOnly ? "bg-amber text-black" : "bg-panel text-muted"}`}>★ Favorites{favs.length ? ` (${favs.length})` : ""}</button>
+          {WHEN.map(([k, t]) => <button key={k} onClick={() => setWhen(k)} className={`h-8 shrink-0 rounded-full px-3 text-xs font-bold ${when === k ? "bg-accent text-accent-ink" : "bg-panel text-muted"}`}>{t}</button>)}
+        </div>
+        {sport === "football" && !league && !q && !favOnly && when === "all" && <TopMatches events={top} />}
         {info?.virtual && <div className="mb-3 rounded-xl border border-amber/30 bg-amber/10 px-4 py-2.5 text-xs text-amber">Virtual {info.name.toLowerCase()}: fictional players and teams, odds and results are simulated.</div>}
         {!now && <div className="space-y-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-panel" />)}</div>}
-        {now > 0 && list.length === 0 && <div className="rounded-xl bg-panel p-8 text-center text-muted">Nothing found.</div>}
+        {now > 0 && list.length === 0 && <div className="rounded-xl bg-panel p-8 text-center text-muted">{favOnly ? "No favorites yet. Tap ☆ next to a match." : "Nothing found."}</div>}
         <div className="space-y-5">
           {[...days].map(([k, evs]) => (
             <section key={k}>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Crest } from "./Crest";
 import { OddsBtn } from "./OddsBtn";
 import { fmtTime } from "@/lib/format";
+import { toggleFav, useStore } from "@/lib/store";
 import type { Ev } from "@/lib/types";
 
 export interface Col { head: string; mk: string; out: string; tag?: string }
@@ -27,24 +28,26 @@ export function colsFor(ev: Ev): Col[] {
 export const GRID = (n: number) => ({ gridTemplateColumns: `minmax(0,1fr) repeat(${n}, 68px) 44px` });
 
 export function EventRow({ ev }: { ev: Ev }) {
+  const fav = useStore().favs.includes(ev.id);
+  const star = <button aria-label={fav ? "Remove from favorites" : "Add to favorites"} aria-pressed={fav} onClick={() => toggleFav(ev.id)} className={`shrink-0 text-lg leading-none ${fav ? "text-amber" : "text-muted/60 hover:text-amber"}`}>{fav ? "★" : "☆"}</button>;
   const cols = colsFor(ev);
   const extra = ev.markets.reduce((n, m) => n + m.outcomes.length, 0) - cols.length;
   return (
     <div className="border-t border-line px-3 py-2 first:border-t-0">
       <div className="hidden items-center gap-1.5 md:grid" style={GRID(cols.length)}>
-        <Link href={`/event/${ev.id}`} className="flex min-w-0 items-center gap-3 pr-2">
+        <div className="flex min-w-0 items-center gap-2">{star}<Link href={`/event/${ev.id}`} className="flex min-w-0 flex-1 items-center gap-3 pr-2">
           <span className="num w-11 shrink-0 text-xs font-bold text-muted">{fmtTime(ev.start)}</span>
           <span className="min-w-0 text-[13.5px] font-semibold leading-tight"><span className="flex items-center gap-2 truncate"><Crest name={ev.home} size={18} />{ev.home}</span><span className="mt-1 flex items-center gap-2 truncate"><Crest name={ev.away} size={18} />{ev.away}</span></span>
-        </Link>
+        </Link></div>
         {cols.map((c) => <OddsBtn key={c.head} ev={ev} mk={c.mk} out={c.out} tag={c.tag ?? ""} />)}
         <Link href={`/event/${ev.id}`} className="grid h-9 place-items-center rounded-lg bg-panel2 text-xs font-bold text-muted hover:text-accent">{extra > 0 ? `+${extra}` : "›"}</Link>
       </div>
       <div className="md:hidden">
-        <Link href={`/event/${ev.id}`} className="mb-2 flex items-center gap-3">
+        <div className="mb-2 flex items-center gap-2">{star}<Link href={`/event/${ev.id}`} className="flex min-w-0 flex-1 items-center gap-3">
           <span className="num w-11 shrink-0 text-xs font-bold text-muted">{fmtTime(ev.start)}</span>
           <span className="min-w-0 flex-1 text-sm font-semibold leading-tight"><span className="flex items-center gap-2 truncate"><Crest name={ev.home} size={18} />{ev.home}</span><span className="mt-1 flex items-center gap-2 truncate"><Crest name={ev.away} size={18} />{ev.away}</span></span>
           <span className="rounded-md bg-panel2 px-2 py-1 text-[11px] font-bold text-muted">{extra > 0 ? `+${extra}` : "›"}</span>
-        </Link>
+        </Link></div>
         <div className={`grid gap-1.5 ${cols.length > 4 && ev.sport === "football" ? "grid-cols-3" : "grid-cols-3"}`}>
           {cols.slice(0, 3).map((c) => <OddsBtn key={c.head} ev={ev} mk={c.mk} out={c.out} tag={c.head} />)}
         </div>
